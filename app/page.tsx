@@ -52,17 +52,17 @@ export default function HomePage() {
 
       <div className="grid2">
         <div className="panel">
-          <h3>Search by Neo ID</h3>
+          <h3>Check your shortlist</h3>
           <p className="psub" style={{ marginBottom: 0 }}>
-            Check any Neo ID — full or partial — against every shortlist pulled from the mails, including Excel
-            attachments and IDs listed inline in the body.
+            Enter your Neo ID to see who shortlisted you. It&rsquo;s matched against one-way fingerprints and never
+            saved — no Neo ID, yours or anyone&rsquo;s, is ever stored.
           </p>
         </div>
         <div className="panel">
-          <h3>Nothing hidden</h3>
+          <h3>Current batch only</h3>
           <p className="psub" style={{ marginBottom: 0 }}>
-            Every extracted field sits next to the original mail. Low-confidence fields are flagged, not silently
-            trusted — cross-check before you act.
+            Sign-in is limited to 2023-batch VIT accounts, so company JDs stay within the batch they were shared with.
+            Every field sits next to the original mail so you can verify it.
           </p>
         </div>
       </div>

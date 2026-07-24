@@ -11,23 +11,28 @@ describe("isAuthorized", () => {
     await db.adminUser.create({ data: { email: "owner@gmail.com" } });
   });
 
-  it("allows a vitstudent.ac.in email as a student", async () => {
-    const result = await isAuthorized("someone@vitstudent.ac.in", db);
+  it("allows a current-batch (2023) vitstudent.ac.in email as a student", async () => {
+    const result = await isAuthorized("someone.2023@vitstudent.ac.in", db);
     expect(result).toEqual({ allowed: true, role: "student" });
   });
 
-  it("allows an allowlisted personal email as admin", async () => {
+  it("rejects a vitstudent.ac.in email from another batch (no 2023 marker)", async () => {
+    const result = await isAuthorized("junior.2025@vitstudent.ac.in", db);
+    expect(result).toEqual({ allowed: false, role: null });
+  });
+
+  it("allows an allowlisted personal email as admin, regardless of batch", async () => {
     const result = await isAuthorized("owner@gmail.com", db);
     expect(result).toEqual({ allowed: true, role: "admin" });
   });
 
-  it("rejects an email that is neither the college domain nor allowlisted", async () => {
+  it("rejects an email that is neither the current batch nor allowlisted", async () => {
     const result = await isAuthorized("random@gmail.com", db);
     expect(result).toEqual({ allowed: false, role: null });
   });
 
   it("is case-insensitive on domain and allowlist checks", async () => {
-    expect((await isAuthorized("Someone@VITSTUDENT.AC.IN", db)).allowed).toBe(true);
+    expect((await isAuthorized("Someone.2023@VITSTUDENT.AC.IN", db)).allowed).toBe(true);
     expect((await isAuthorized("Owner@Gmail.com", db)).allowed).toBe(true);
   });
 });

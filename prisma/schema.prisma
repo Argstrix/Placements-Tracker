@@ -62,9 +62,9 @@ model MailEvent {
   company                Company?      @relation(fields: [companyId], references: [id])
   companyMatchConfidence ConfidenceLevel?
 
-  attachments      Attachment[]
-  shortlistEntries ShortlistEntry[]
-  createdAt        DateTime @default(now())
+  attachments     Attachment[]
+  shortlistHashes ShortlistHash[]
+  createdAt       DateTime @default(now())
 }
 
 model Attachment {
@@ -77,21 +77,24 @@ model Attachment {
   createdAt   DateTime  @default(now())
 }
 
-model ShortlistEntry {
+// Stores only a one-way hash of each shortlisted Neo ID — never the ID itself.
+// See ingestion/hashNeoId.ts. A leaked database cannot reveal any Neo ID or
+// reconstruct a company's shortlist; matching is done by hashing the user's
+// entered ID and comparing hashes (exact match only).
+model ShortlistHash {
   id          String    @id @default(cuid())
-  neoId       String
+  idHash      String
   round       String?
   mailEventId String
   mailEvent   MailEvent @relation(fields: [mailEventId], references: [id])
   createdAt   DateTime  @default(now())
 
-  @@index([neoId])
+  @@index([idHash])
 }
 
 model User {
   id        String     @id @default(cuid())
   email     String     @unique
-  neoId     String?
   interests Interest[]
   createdAt DateTime   @default(now())
 }

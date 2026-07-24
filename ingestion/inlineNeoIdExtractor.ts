@@ -24,3 +24,21 @@ export function extractNeoIdsFromBody(bodyText: string): ExtractedShortlistEntry
 
   return entries;
 }
+
+/**
+ * Replaces any line that is entirely a Neo ID with a placeholder, so the stored
+ * mail body never contains Neo IDs. Uses the same whole-line match as
+ * extraction, so exactly what we'd treat as a Neo ID is what gets removed;
+ * prose and other content are left untouched.
+ */
+export function redactNeoIds(bodyText: string): string {
+  return bodyText
+    .split(/\r?\n/)
+    .map((line) => {
+      const candidate = line.trim().toUpperCase();
+      const isNeoId =
+        NEO_ID_PATTERN.test(candidate) && /[0-9]/.test(candidate) && /[A-Z]/.test(candidate);
+      return isNeoId ? "[Neo ID removed]" : line;
+    })
+    .join("\n");
+}

@@ -3,8 +3,18 @@ export default function SiteFooter() {
     <footer className="sitefoot">
       <p>
         <strong>Unofficial, student-built tracker.</strong> Not affiliated with, endorsed by, or operated by VIT CDC.
-        Always cross-check dates, eligibility, and instructions against the original placement-cell mail shown on each page
-        before acting.
+        Always cross-check dates, eligibility, and instructions against the original placement-cell mail shown on each
+        page before acting.
+      </p>
+      <p>
+        <strong>Access is limited to the current placement batch.</strong> Only 2023-batch VIT accounts can sign in;
+        other batches and outside accounts are blocked, so company job descriptions stay within the batch they were
+        shared with.
+      </p>
+      <p>
+        <strong>We do not store Neo IDs.</strong> Shortlist matching uses irreversible one-way fingerprints of the IDs
+        in shortlist mails — no Neo ID is ever kept in the database — and your own Neo ID is used only during your
+        session and is never saved.
       </p>
     </footer>
   );

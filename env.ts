@@ -16,6 +16,9 @@ const envSchema = z.object({
   TAVILY_API_KEY: z.string().min(1),
   BLOB_READ_WRITE_TOKEN: z.string().min(1),
   CRON_SECRET: z.string().min(1),
+  // Secret pepper for hashing Neo IDs. Neo IDs are never stored in plaintext —
+  // only salted with this value and hashed — so this must be set and kept secret.
+  NEO_ID_HASH_SECRET: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

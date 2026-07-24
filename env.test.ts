@@ -31,6 +31,7 @@ describe("getEnv", () => {
       TAVILY_API_KEY: "key",
       BLOB_READ_WRITE_TOKEN: "token",
       CRON_SECRET: "secret",
+      NEO_ID_HASH_SECRET: "pepper",
     };
     expect(getEnv().INITIAL_ADMIN_EMAIL).toBe("a@b.com");
   });

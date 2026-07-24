@@ -6,13 +6,13 @@ export default function DeleteMyDataButton() {
     <form
       action={deleteMyData}
       onSubmit={(e) => {
-        if (!confirm("This clears your saved Neo ID and every company you're tracking interest in. Continue?")) {
+        if (!confirm("This removes every company you're tracking interest in. Continue?")) {
           e.preventDefault();
         }
       }}
     >
       <button type="submit" className="btn danger">
-        Delete my data — Neo ID &amp; tracked interests
+        Delete my data — tracked interests
       </button>
     </form>
   );

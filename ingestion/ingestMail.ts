@@ -2,8 +2,9 @@ import type { PrismaClient } from "@prisma/client";
 import { parseMail, type ParsedAttachment } from "./parseMail";
 import { tryRegexExtract } from "./regexExtractor";
 import { extractWithLlm, type LlmClients } from "./llmExtractor";
-import { extractNeoIdsFromXlsx } from "./xlsxExtractor";
-import { extractNeoIdsFromBody } from "./inlineNeoIdExtractor";
+import { extractNeoIdsFromXlsx, type ExtractedShortlistEntry } from "./xlsxExtractor";
+import { extractNeoIdsFromBody, redactNeoIds } from "./inlineNeoIdExtractor";
+import { hashNeoId } from "./hashNeoId";
 import { matchCompany, normalizeCompanyName } from "./matchCompany";
 
 export interface IngestOptions {
@@ -55,20 +56,32 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
       throw new Error("Extraction produced no company name for a company-linked event type");
     }
 
-    const uploadedAttachments = await Promise.all(
-      mail.attachments.map(async (att) => ({ ...att, blobUrl: await uploadAttachment(att) }))
-    );
-
-    const xlsxShortlistEntries = uploadedAttachments
-      .filter((a) => a.mimeType === XLSX_MIME)
-      .flatMap((a) => extractNeoIdsFromXlsx(a));
+    // Shortlist sheets ARE Neo ID lists, so they are never stored: we detect
+    // them, keep only a one-way hash of each ID, and drop the file itself.
+    // Every other attachment (JDs, etc.) is stored as normal.
+    const shortlistEntries: ExtractedShortlistEntry[] = [];
+    const attachmentsToStore: ParsedAttachment[] = [];
+    for (const att of mail.attachments) {
+      if (att.mimeType === XLSX_MIME) {
+        const ids = extractNeoIdsFromXlsx(att);
+        if (ids.length > 0) {
+          shortlistEntries.push(...ids);
+          continue; // drop the sheet — it's a Neo ID list, never persisted
+        }
+      }
+      attachmentsToStore.push(att);
+    }
 
     // Some shortlist mails (e.g. the Fischer Jordan format) paste Neo IDs
-    // directly into the body instead of attaching a sheet — only scan the
-    // body when there's no xlsx attachment already supplying the list, to
-    // avoid double-counting mails that include both.
-    const shortlistEntries =
-      xlsxShortlistEntries.length > 0 ? xlsxShortlistEntries : extractNeoIdsFromBody(mail.bodyText);
+    // directly into the body instead of attaching a sheet — scan the body only
+    // when no sheet already supplied the list, to avoid double-counting.
+    if (shortlistEntries.length === 0) {
+      shortlistEntries.push(...extractNeoIdsFromBody(mail.bodyText));
+    }
+
+    const uploadedAttachments = await Promise.all(
+      attachmentsToStore.map(async (att) => ({ ...att, blobUrl: await uploadAttachment(att) }))
+    );
 
     const { mailEventId, newCompany } = await db.$transaction(async (tx) => {
       let companyId: string | null = null;
@@ -136,7 +149,8 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
           sender: mail.from,
           receivedAt: mail.receivedAt,
           gmailMessageId,
-          bodyText: mail.bodyText,
+          // Redacted so the stored body never contains Neo IDs.
+          bodyText: redactNeoIds(mail.bodyText),
           companyId,
           companyMatchConfidence,
         },
@@ -153,9 +167,10 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
         });
       }
 
+      // Store only irreversible hashes — never the Neo IDs themselves.
       for (const entry of shortlistEntries) {
-        await tx.shortlistEntry.create({
-          data: { neoId: entry.neoId, round: entry.round, mailEventId: mailEvent.id },
+        await tx.shortlistHash.create({
+          data: { idHash: hashNeoId(entry.neoId), round: entry.round, mailEventId: mailEvent.id },
         });
       }
 

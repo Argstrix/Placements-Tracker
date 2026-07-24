@@ -4,23 +4,6 @@ import { getServerSession } from "next-auth";
 import { buildAuthOptions } from "@/auth/authOptions";
 import { revalidatePath } from "next/cache";
 
-export async function setNeoId(formData: FormData): Promise<void> {
-  const session = await getServerSession(buildAuthOptions());
-  if (!session?.user?.email) throw new Error("Not authorized");
-  // Entirely optional — an empty/missing submission clears it rather than
-  // saving a stray "null" or "" string. Nothing in the app requires a Neo
-  // ID to be set for any other feature to work.
-  const raw = formData.get("neoId");
-  const trimmed = raw ? String(raw).trim().toUpperCase() : "";
-  const neoId = trimmed.length > 0 ? trimmed : null;
-  await prisma.user.upsert({
-    where: { email: session.user.email },
-    update: { neoId },
-    create: { email: session.user.email, neoId },
-  });
-  revalidatePath("/dashboard");
-}
-
 export async function setInterest(companyId: string, status: string): Promise<void> {
   const session = await getServerSession(buildAuthOptions());
   if (!session?.user?.email) throw new Error("Not authorized");
@@ -37,11 +20,11 @@ export async function setInterest(companyId: string, status: string): Promise<vo
   revalidatePath("/dashboard");
 }
 
-/** Self-service data erasure: removes this account's Neo ID and every
- * tracked-interest record. Scoped to the user's own personalization data —
- * reported issues aren't touched, since those are support records the
- * admin may still need to act on, akin to a support ticket. A no-op if the
- * user never saved a Neo ID or tracked any interest in the first place. */
+/** Self-service data erasure: removes this account and every tracked-interest
+ * record. (Neo IDs are never stored, so there's nothing of that kind to erase.)
+ * Scoped to the user's own personalization data — reported issues aren't
+ * touched, since those are support records the admin may still need to act on,
+ * akin to a support ticket. A no-op if the user never tracked any interest. */
 export async function deleteMyData(): Promise<void> {
   const session = await getServerSession(buildAuthOptions());
   if (!session?.user?.email) throw new Error("Not authorized");

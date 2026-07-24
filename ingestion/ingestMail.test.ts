@@ -4,6 +4,7 @@ import path from "node:path";
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import { createTestPrismaClient } from "@/db/testClient";
 import { ingestMail } from "./ingestMail";
+import { hashNeoId } from "./hashNeoId";
 import type { PrismaClient } from "@prisma/client";
 
 const fixturesDir = path.join(process.cwd(), "sample-emails");
@@ -62,9 +63,10 @@ describe("ingestMail", () => {
     });
 
     expect(result.status).toBe("SUCCESS");
-    const entries = await db.shortlistEntry.findMany();
+    const entries = await db.shortlistHash.findMany();
     expect(entries.length).toBeGreaterThanOrEqual(14);
-    expect(entries.map((e) => e.neoId)).toContain("O3D8V4U8");
+    // Stored as a one-way hash — never the plaintext Neo ID.
+    expect(entries.map((e) => e.idHash)).toContain(hashNeoId("O3D8V4U8"));
   });
 
   it("extracts Neo IDs into ShortlistEntry rows from an xlsx-attached shortlist mail", async () => {
@@ -94,7 +96,7 @@ describe("ingestMail", () => {
     });
 
     expect(result.status).toBe("SUCCESS");
-    const entries = await db.shortlistEntry.findMany();
+    const entries = await db.shortlistHash.findMany();
     expect(entries.length).toBeGreaterThan(0);
   });
 

@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/db/client";
 import { isAuthorized } from "./isAuthorized";
 import { getEnv } from "@/env";
+import { seedInitialAdmin } from "@/admin/seedInitialAdmin";
 
 export function buildAuthOptions(): NextAuthOptions {
   const env = getEnv();
@@ -16,6 +17,10 @@ export function buildAuthOptions(): NextAuthOptions {
     callbacks: {
       async signIn({ user }) {
         if (!user.email) return false;
+        // Idempotent (upsert) — safe to run on every sign-in attempt rather
+        // than depending on a separate startup hook, which behaves
+        // inconsistently across serverless cold starts.
+        await seedInitialAdmin(prisma, env.INITIAL_ADMIN_EMAIL);
         const { allowed } = await isAuthorized(user.email, prisma);
         return allowed;
       },

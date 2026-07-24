@@ -12,5 +12,6 @@ export default defineConfig({
     // shell-out per test file; under full-suite parallel execution that can
     // exceed Vitest's 5s default, even though each step is fast in isolation.
     testTimeout: 20000,
+    hookTimeout: 20000,
   },
 });

@@ -1,8 +1,11 @@
 import { prisma } from "@/db/client";
 import { getCompanyTimeline } from "@/queries/getCompanyTimeline";
 import MailEventCard from "../../components/MailEventCard";
+import InterestTracker from "./InterestTracker";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { buildAuthOptions } from "@/auth/authOptions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +14,23 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
   const company = await getCompanyTimeline(prisma, id);
   if (!company) notFound();
 
+  const session = await getServerSession(buildAuthOptions());
+  const existingInterest = session?.user?.email
+    ? await prisma.interest.findFirst({
+        where: { companyId: id, user: { email: session.user.email } },
+      })
+    : null;
+
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">{company.name}</h1>
         {company.category && <p className="text-gray-600">{company.category}</p>}
+        {session && (
+          <div className="mt-2">
+            <InterestTracker companyId={company.id} initialStatus={existingInterest?.status ?? null} />
+          </div>
+        )}
         <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
           {company.ctc && (
             <>

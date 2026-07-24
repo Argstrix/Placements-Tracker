@@ -37,3 +37,33 @@ describe("addAdmin server action", () => {
     expect(admins.map((a) => a.email)).toContain("newadmin@gmail.com");
   });
 });
+
+describe("removeAdmin server action", () => {
+  it("allows removal when more than one admin remains", async () => {
+    // Continues from the shared test DB above: owner@gmail.com and
+    // newadmin@gmail.com both exist at this point.
+    mockGetSessionEmail.mockResolvedValue("owner@gmail.com");
+    const { removeAdmin } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    const target = await db.adminUser.findFirstOrThrow({ where: { email: "newadmin@gmail.com" } });
+    await removeAdmin(target.id);
+
+    const admins = await db.adminUser.findMany();
+    expect(admins.map((a) => a.email)).toEqual(["owner@gmail.com"]);
+  });
+
+  it("refuses to remove the last remaining admin", async () => {
+    mockGetSessionEmail.mockResolvedValue("owner@gmail.com");
+    const { removeAdmin } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    const last = await db.adminUser.findFirstOrThrow({ where: { email: "owner@gmail.com" } });
+    await expect(removeAdmin(last.id)).rejects.toThrow(/last remaining admin/i);
+
+    const admins = await db.adminUser.findMany();
+    expect(admins).toHaveLength(1);
+  });
+});

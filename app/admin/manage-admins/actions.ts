@@ -21,6 +21,12 @@ export async function addAdmin(formData: FormData): Promise<void> {
 
 export async function removeAdmin(id: string): Promise<void> {
   await requireAdmin();
+  // Removing the last admin would lock everyone out of every admin route
+  // with no self-service way back in — refuse rather than allow that.
+  const count = await prisma.adminUser.count();
+  if (count <= 1) {
+    throw new Error("Cannot remove the last remaining admin");
+  }
   await prisma.adminUser.delete({ where: { id } });
   revalidatePath("/admin/manage-admins");
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/db/client";
 import { getServerSession } from "next-auth";
 import { buildAuthOptions } from "@/auth/authOptions";
 import { setNeoId } from "./actions";
+import DeleteMyDataButton from "./DeleteMyDataButton";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +67,12 @@ export default async function DashboardPage() {
           ))}
         </ul>
       </div>
+
+      {user && (
+        <div className="pt-4 border-t">
+          <DeleteMyDataButton />
+        </div>
+      )}
     </main>
   );
 }

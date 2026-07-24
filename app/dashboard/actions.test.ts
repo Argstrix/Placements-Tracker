@@ -36,6 +36,60 @@ describe("setNeoId", () => {
     });
     expect(user?.neoId).toBe("A1B2C3D4");
   });
+
+  it("is optional — an empty submission clears it rather than saving a stray string", async () => {
+    mockGetServerSession.mockResolvedValue({ user: { email: "student3@vitstudent.ac.in" } });
+    const { setNeoId } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    const withValue = new FormData();
+    withValue.set("neoId", "z9z9z9z9");
+    await setNeoId(withValue);
+
+    const empty = new FormData();
+    empty.set("neoId", "");
+    await setNeoId(empty);
+
+    const user = await db.user.findUnique({ where: { email: "student3@vitstudent.ac.in" } });
+    expect(user?.neoId).toBeNull();
+  });
+});
+
+describe("deleteMyData", () => {
+  it("rejects when there is no session", async () => {
+    mockGetServerSession.mockResolvedValue(null);
+    const { deleteMyData } = await import("./actions");
+    await expect(deleteMyData()).rejects.toThrow(/not authorized/i);
+  });
+
+  it("is a no-op when the user has no saved data", async () => {
+    mockGetServerSession.mockResolvedValue({ user: { email: "never-saved-anything@vitstudent.ac.in" } });
+    const { deleteMyData } = await import("./actions");
+    await expect(deleteMyData()).resolves.not.toThrow();
+  });
+
+  it("removes the user's Neo ID and interest records, without touching the company", async () => {
+    mockGetServerSession.mockResolvedValue({ user: { email: "student4@vitstudent.ac.in" } });
+    const { setNeoId, setInterest, deleteMyData } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    const company = await db.company.create({ data: { name: "Erasure Co", normalizedName: "erasure-co" } });
+    const formData = new FormData();
+    formData.set("neoId", "d4d4d4d4");
+    await setNeoId(formData);
+    await setInterest(company.id, "interested");
+
+    await deleteMyData();
+
+    const user = await db.user.findUnique({ where: { email: "student4@vitstudent.ac.in" } });
+    expect(user).toBeNull();
+    const interests = await db.interest.findMany({ where: { companyId: company.id } });
+    expect(interests).toHaveLength(0);
+    const stillExists = await db.company.findUnique({ where: { id: company.id } });
+    expect(stillExists).not.toBeNull();
+  });
 });
 
 describe("setInterest", () => {

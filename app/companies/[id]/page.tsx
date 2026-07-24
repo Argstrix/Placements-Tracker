@@ -2,6 +2,7 @@ import { prisma } from "@/db/client";
 import { getCompanyTimeline } from "@/queries/getCompanyTimeline";
 import MailEventCard from "../../components/MailEventCard";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,9 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           <MailEventCard key={event.id} event={event} />
         ))}
       </div>
+      <Link href={`/report-issue?companyId=${company.id}`} className="text-sm text-gray-500 hover:underline">
+        Something wrong on this page? Report an issue.
+      </Link>
     </main>
   );
 }

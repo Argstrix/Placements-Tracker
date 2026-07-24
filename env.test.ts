@@ -31,6 +31,7 @@ describe("getEnv", () => {
       GOOGLE_SEARCH_API_KEY: "key",
       GOOGLE_SEARCH_ENGINE_ID: "id",
       BLOB_READ_WRITE_TOKEN: "token",
+      CRON_SECRET: "secret",
     };
     expect(getEnv().INITIAL_ADMIN_EMAIL).toBe("a@b.com");
   });

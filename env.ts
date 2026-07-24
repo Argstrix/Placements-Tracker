@@ -16,6 +16,7 @@ const envSchema = z.object({
   GOOGLE_SEARCH_API_KEY: z.string().min(1),
   GOOGLE_SEARCH_ENGINE_ID: z.string().min(1),
   BLOB_READ_WRITE_TOKEN: z.string().min(1),
+  CRON_SECRET: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

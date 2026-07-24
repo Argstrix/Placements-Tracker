@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getEnv } from "@/env";
 import { prisma } from "@/db/client";
 import { buildLlmClients } from "@/ingestion/llmExtractor";
@@ -7,12 +7,16 @@ import { fetchGmailMessageRaw, listLabeledMessageIds } from "@/ingestion/gmailCl
 import { sendAdminAlert } from "@/notifications/sendAdminAlert";
 import { retryFailedIngestions } from "@/ingestion/retryFailedIngestions";
 import { syncNewMailFromLabel } from "@/ingestion/syncGmailLabel";
+import { verifyCronRequest } from "@/ingestion/verifyCronRequest";
 
 // Daily fallback: catches anything a missed Pub/Sub push never delivered,
 // and retries mail that previously failed ingestion. Both operations are
 // idempotent, so running this alongside the near-real-time webhook is safe.
-export async function GET() {
+export async function GET(req: NextRequest) {
   const env = getEnv();
+  if (!verifyCronRequest(req, env)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const llmClients = buildLlmClients(env);
 
   const synced = await syncNewMailFromLabel({

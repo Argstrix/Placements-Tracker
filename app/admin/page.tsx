@@ -23,9 +23,14 @@ export default async function AdminPage() {
     <main className="max-w-4xl mx-auto p-6 space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-xl font-semibold">Admin Dashboard</h1>
-        <Link href="/admin/manage-admins" className="text-blue-600 hover:underline text-sm">
-          Manage Admins
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/admin/manual-ingest" className="text-blue-600 hover:underline text-sm">
+            Manual Ingest
+          </Link>
+          <Link href="/admin/manage-admins" className="text-blue-600 hover:underline text-sm">
+            Manage Admins
+          </Link>
+        </div>
       </div>
 
       <section>

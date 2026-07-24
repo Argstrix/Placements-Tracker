@@ -115,4 +115,34 @@ describe("ingestMail", () => {
     const companies = await db.company.findMany();
     expect(companies).toHaveLength(1);
   });
+
+  it("fires onNewCompany only when a brand-new company is created, not on a match", async () => {
+    const raw = readFileSync(path.join(fixturesDir, "Placement Registration - Sample.eml"));
+    const newCompanyCalls: { id: string; name: string }[] = [];
+    const result = await ingestMail(raw, "msg-5", {
+      db,
+      llmClients: {
+        primary: new FakeListChatModel({ responses: [] }),
+        fallback: new FakeListChatModel({ responses: [] }),
+      },
+      uploadAttachment: async () => "https://blob.example/fake-jd.pdf",
+      onNewCompany: (company) => newCompanyCalls.push(company),
+    });
+
+    expect(result.newCompanyId).toBeTruthy();
+    expect(newCompanyCalls).toHaveLength(1);
+    expect(newCompanyCalls[0].name).toBe("IDFC FIRST Bank");
+
+    // A second mail about the same company should match, not re-fire the hook.
+    await ingestMail(raw, "msg-6", {
+      db,
+      llmClients: {
+        primary: new FakeListChatModel({ responses: [] }),
+        fallback: new FakeListChatModel({ responses: [] }),
+      },
+      uploadAttachment: async () => "https://blob.example/fake-jd-2.pdf",
+      onNewCompany: (company) => newCompanyCalls.push(company),
+    });
+    expect(newCompanyCalls).toHaveLength(1);
+  });
 });

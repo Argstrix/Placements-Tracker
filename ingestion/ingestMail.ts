@@ -9,11 +9,17 @@ export interface IngestOptions {
   db: PrismaClient;
   llmClients: LlmClients;
   uploadAttachment: (att: ParsedAttachment) => Promise<string>;
+  /** Fired (not awaited) after a brand-new Company row is created — never
+   * called when a mail links to an existing company's timeline. Intended
+   * for the one-time enrichment job; deliberately fire-and-forget so a
+   * slow or failing enrichment can never delay or fail ingestion itself. */
+  onNewCompany?: (company: { id: string; name: string }) => void;
 }
 
 export interface IngestResult {
   status: "SUCCESS" | "FAILED";
   mailEventId?: string;
+  newCompanyId?: string;
   error?: string;
 }
 
@@ -56,9 +62,10 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
       .filter((a) => a.mimeType === XLSX_MIME)
       .flatMap((a) => extractNeoIdsFromXlsx(a));
 
-    const mailEventId = await db.$transaction(async (tx) => {
+    const { mailEventId, newCompany } = await db.$transaction(async (tx) => {
       let companyId: string | null = null;
       let companyMatchConfidence: "HIGH" | "LOW" | null = null;
+      let createdCompany: { id: string; name: string } | null = null;
 
       if (extraction.companyName) {
         const existing = await tx.company.findMany({ select: { id: true, normalizedName: true } });
@@ -84,6 +91,7 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
             },
           });
           companyId = created.id;
+          createdCompany = { id: created.id, name: created.name };
         }
       }
 
@@ -121,10 +129,14 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
         data: { gmailMessageId, status: "SUCCESS" },
       });
 
-      return mailEvent.id;
+      return { mailEventId: mailEvent.id, newCompany: createdCompany };
     });
 
-    return { status: "SUCCESS", mailEventId };
+    if (newCompany && options.onNewCompany) {
+      options.onNewCompany(newCompany);
+    }
+
+    return { status: "SUCCESS", mailEventId, newCompanyId: newCompany?.id };
   } catch (error) {
     await db.ingestionLog.create({
       data: {

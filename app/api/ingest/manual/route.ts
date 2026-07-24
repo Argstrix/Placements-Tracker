@@ -3,6 +3,7 @@ import { getEnv } from "@/env";
 import { ingestMail } from "@/ingestion/ingestMail";
 import { buildLlmClients } from "@/ingestion/llmExtractor";
 import { uploadToBlob } from "@/ingestion/uploadAttachment";
+import { enrichAndSaveCompany } from "@/enrichment/enrichAndSaveCompany";
 import { prisma } from "@/db/client";
 import { isAuthorized } from "@/auth/isAuthorized";
 import { getServerSession } from "next-auth";
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
     db: prisma,
     llmClients: buildLlmClients(env),
     uploadAttachment: uploadToBlob,
+    onNewCompany: (company) => enrichAndSaveCompany(company, prisma, env),
   });
 
   return NextResponse.json(result, { status: result.status === "SUCCESS" ? 200 : 422 });

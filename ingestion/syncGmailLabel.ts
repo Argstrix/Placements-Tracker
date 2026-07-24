@@ -9,6 +9,7 @@ export interface SyncOptions {
   uploadAttachment: (att: ParsedAttachment) => Promise<string>;
   listLabeledMessageIds: () => Promise<string[]>;
   fetchRawByGmailId: (id: string) => Promise<Buffer>;
+  onNewCompany?: (company: { id: string; name: string }) => void;
 }
 
 /** Ingests any message under the watched label that hasn't already
@@ -34,6 +35,7 @@ export async function syncNewMailFromLabel(options: SyncOptions): Promise<{ proc
       db,
       llmClients: options.llmClients,
       uploadAttachment: options.uploadAttachment,
+      onNewCompany: options.onNewCompany,
     });
     if (result.status === "SUCCESS") processed += 1;
   }

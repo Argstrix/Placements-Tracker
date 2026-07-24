@@ -4,6 +4,7 @@ import { fetchGmailMessageRaw, listLabeledMessageIds } from "@/ingestion/gmailCl
 import { syncNewMailFromLabel } from "@/ingestion/syncGmailLabel";
 import { buildLlmClients } from "@/ingestion/llmExtractor";
 import { uploadToBlob } from "@/ingestion/uploadAttachment";
+import { enrichAndSaveCompany } from "@/enrichment/enrichAndSaveCompany";
 import { prisma } from "@/db/client";
 
 // Pub/Sub push subscriptions are configured with this token as a query
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
     uploadAttachment: uploadToBlob,
     listLabeledMessageIds: () => listLabeledMessageIds(env),
     fetchRawByGmailId: (id) => fetchGmailMessageRaw(id, env),
+    onNewCompany: (company) => enrichAndSaveCompany(company, prisma, env),
   });
 
   return NextResponse.json({ ok: true, ...result });

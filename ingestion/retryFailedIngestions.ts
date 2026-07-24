@@ -10,6 +10,7 @@ export interface RetryOptions {
   fetchRawByGmailId: (id: string) => Promise<Buffer>;
   sendAlert: (subject: string, body: string) => Promise<void>;
   maxRetries: number;
+  onNewCompany?: (company: { id: string; name: string }) => void;
 }
 
 export async function retryFailedIngestions(options: RetryOptions): Promise<{ retried: number; stillFailed: number }> {
@@ -43,6 +44,7 @@ export async function retryFailedIngestions(options: RetryOptions): Promise<{ re
       db,
       llmClients: options.llmClients,
       uploadAttachment: options.uploadAttachment,
+      onNewCompany: options.onNewCompany,
     });
 
     if (result.status === "SUCCESS") {

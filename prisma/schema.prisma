@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MailEventType {
+  REGISTRATION
+  SHORTLIST_ROUND
+  RESULT
+  UPDATE
+  GENERAL_NOTICE
+}
+
+enum IngestionStatus {
+  SUCCESS
+  FAILED
+}
+
+enum ConfidenceLevel {
+  HIGH
+  LOW
+}
+
+model Company {
+  id                  String    @id @default(cuid())
+  name                String
+  normalizedName      String    @unique
+  category            String?
+  campuses            String[]
+  ctc                 String?
+  stipend             String?
+  eligibilityCriteria String?
+  eligibleBranches    String[]
+  visitDate           DateTime?
+  website             String?
+  nameConfidence      ConfidenceLevel @default(HIGH)
+  fieldConfidence     Json      @default("{}")
+
+  enrichmentSummary     String?
+  enrichmentSources     String[] @default([])
+  enrichmentAttemptedAt DateTime?
+
+  mailEvents     MailEvent[]
+  interests      Interest[]
+  reportedIssues ReportedIssue[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MailEvent {
+  id                     String        @id @default(cuid())
+  type                   MailEventType
+  subject                String
+  sender                 String
+  receivedAt             DateTime
+  gmailMessageId         String        @unique
+  bodyText               String
+  companyId              String?
+  company                Company?      @relation(fields: [companyId], references: [id])
+  companyMatchConfidence ConfidenceLevel?
+
+  attachments      Attachment[]
+  shortlistEntries ShortlistEntry[]
+  createdAt        DateTime @default(now())
+}
+
+model Attachment {
+  id          String    @id @default(cuid())
+  mailEventId String
+  mailEvent   MailEvent @relation(fields: [mailEventId], references: [id])
+  filename    String
+  mimeType    String
+  blobUrl     String
+  createdAt   DateTime  @default(now())
+}
+
+model ShortlistEntry {
+  id          String    @id @default(cuid())
+  neoId       String
+  round       String?
+  mailEventId String
+  mailEvent   MailEvent @relation(fields: [mailEventId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([neoId])
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  neoId     String?
+  interests Interest[]
+  createdAt DateTime   @default(now())
+}
+
+model Interest {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  status    String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, companyId])
+}
+
+model ReportedIssue {
+  id            String   @id @default(cuid())
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id])
+  description   String
+  reporterEmail String
+  createdAt     DateTime @default(now())
+}
+
+model IngestionLog {
+  id             String          @id @default(cuid())
+  gmailMessageId String
+  status         IngestionStatus
+  errorDetail    String?
+  retryCount     Int             @default(0)
+  createdAt      DateTime        @default(now())
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  addedBy   String?
+  createdAt DateTime @default(now())
+}

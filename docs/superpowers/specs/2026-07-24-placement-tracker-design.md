@@ -65,7 +65,7 @@ The user (a VIT Chennai student, 2027 batch) receives frequent placement-cell ma
 
 The first time a new Company record is created (never on subsequent mails about the same company — this is strictly a one-time job per company), a background job:
 
-1. Runs a web search for the company name via Google's Programmable Search Engine API (free tier: 100 queries/day, comfortably enough at this volume).
+1. Runs a web search for the company name via Tavily's search API (free tier, comfortably enough at this volume — switched from Google's Programmable Search Engine after Google closed it to new signups, with a full shutdown dated 2027-01-01).
 2. Feeds the top results to the same LangChain/Gemini setup used for extraction, asking for a short "about this company" summary (industry, what they do) and their real website if the mail didn't already include one.
 3. Stores the result **and the source URLs the summary was drawn from** on the Company record. The UI shows the blurb with those source links directly beneath it, clearly labeled as an auto-generated, unofficial overview — same "show the source" principle used for mail references elsewhere in the app, so students can click through and verify rather than just trusting the summary.
 
@@ -120,7 +120,7 @@ Target: $0/month at full scale (~12k students).
 | Gemini API | Free tier | Extraction volume is a handful of calls/day |
 | Groq API | Free tier | Fallback only, same low volume |
 | Google OAuth | Free | Standard SSO, no cost at any user count |
-| Google Programmable Search Engine | Free tier (100 queries/day) | One-time-per-company enrichment job; company volume stays well under quota |
+| Tavily | Free tier (~1,000 credits/mo) | One-time-per-company enrichment job; company volume stays well under quota. Not Google Programmable Search Engine — that's closed to new signups and fully shuts down 2027-01-01. |
 
 ## Appendix: Sample Mail Findings
 

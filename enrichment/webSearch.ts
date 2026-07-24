@@ -6,19 +6,24 @@ export interface SearchResult {
   snippet: string;
 }
 
+// Google's Custom Search JSON API is closed to new customers and fully
+// shuts down 2027-01-01 — using Tavily instead, which is purpose-built for
+// feeding LLM summarization (exactly this job's use case) and has an
+// ongoing free tier, not a sunset one.
 export async function searchWeb(query: string, env: Env): Promise<SearchResult[]> {
-  const url = new URL("https://www.googleapis.com/customsearch/v1");
-  url.searchParams.set("key", env.GOOGLE_SEARCH_API_KEY);
-  url.searchParams.set("cx", env.GOOGLE_SEARCH_ENGINE_ID);
-  url.searchParams.set("q", query);
-  url.searchParams.set("num", "3");
-
-  const res = await fetch(url.toString());
+  const res = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.TAVILY_API_KEY}`,
+    },
+    body: JSON.stringify({ query, max_results: 3 }),
+  });
   if (!res.ok) throw new Error(`Search API returned ${res.status}`);
   const data = await res.json();
-  return (data.items ?? []).map((item: { title: string; link: string; snippet: string }) => ({
+  return (data.results ?? []).map((item: { title: string; url: string; content: string }) => ({
     title: item.title,
-    url: item.link,
-    snippet: item.snippet,
+    url: item.url,
+    snippet: item.content,
   }));
 }

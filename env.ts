@@ -13,8 +13,7 @@ const envSchema = z.object({
   GMAIL_PUBSUB_VERIFICATION_TOKEN: z.string().min(1),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
   GROQ_API_KEY: z.string().min(1),
-  GOOGLE_SEARCH_API_KEY: z.string().min(1),
-  GOOGLE_SEARCH_ENGINE_ID: z.string().min(1),
+  TAVILY_API_KEY: z.string().min(1),
   BLOB_READ_WRITE_TOKEN: z.string().min(1),
   CRON_SECRET: z.string().min(1),
 });

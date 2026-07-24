@@ -24,7 +24,7 @@ Full design rationale lives in [`docs/superpowers/specs/2026-07-24-placement-tra
 - **Extraction**: LangChain's structured-output API (Zod schema, automatic re-prompt on invalid output) with `.withFallbacks()` chaining Gemini (primary) to Groq (fallback). A regex pass runs first for labeled-field mails, skipping the LLM call entirely when it matches confidently.
 - **Ingestion**: Gmail `watch()` pushes to a webhook via Cloud Pub/Sub; a daily Vercel Cron job re-syncs the label (catches anything a missed push didn't deliver) and retries previously failed mail, alerting the admin by email only if a mail is still failing after retries are exhausted.
 - **Attachments**: Vercel Blob storage, served only through an authenticated proxy route — never linked as raw public URLs.
-- **Company enrichment**: a one-time, best-effort web search + LLM summary per new company, via Google's Programmable Search Engine, with sources always shown alongside the summary.
+- **Company enrichment**: a one-time, best-effort web search + LLM summary per new company, via [Tavily](https://tavily.com) (chosen over Google's Custom Search API, which is closed to new signups and shuts down 2027-01-01), with sources always shown alongside the summary.
 
 Every external service used has a free tier that comfortably covers this project's volume — see the Cost table in the design spec.
 
@@ -66,7 +66,7 @@ Copy `.env.example` to `.env.local` and fill in real values before connecting to
 | `GMAIL_PUBSUB_VERIFICATION_TOKEN` | Any random string — `openssl rand -hex 16` works. Set as a query param on the Pub/Sub push subscription's endpoint URL. |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) — free tier. |
 | `GROQ_API_KEY` | [Groq Console](https://console.groq.com/keys) — free tier, used as the extraction fallback. |
-| `GOOGLE_SEARCH_API_KEY` / `GOOGLE_SEARCH_ENGINE_ID` | [Programmable Search Engine](https://programmablesearchengine.google.com) — create a search engine (web-wide), then get an API key from Google Cloud Console. Used only for the one-time company enrichment blurb. |
+| `TAVILY_API_KEY` | [Tavily](https://app.tavily.com) — free tier, no card required. Used only for the one-time company enrichment blurb. |
 | `BLOB_READ_WRITE_TOKEN` | Vercel dashboard → Storage → Blob → create a store → copy the token. |
 | `CRON_SECRET` | Any random string — `openssl rand -base64 32`. Vercel sends this automatically as a Bearer token for jobs defined in `vercel.json`; it's what stops the cron endpoints from being triggerable by anyone on the internet. |
 
@@ -86,4 +86,4 @@ Copy `.env.example` to `.env.local` and fill in real values before connecting to
 4. Deploy. `vercel.json` already defines the two daily cron jobs (`renew-watch`, `retry-failed`) — no extra configuration needed.
 5. Sign in once with the account matching `INITIAL_ADMIN_EMAIL` to confirm admin access, then use **Manage Admins** in the dashboard to add anyone else.
 
-Everything in this stack — Vercel Hobby, Neon free tier, Vercel Blob free tier, Gmail API, Cloud Pub/Sub free tier, Gemini free tier, Groq free tier, Google OAuth — stays at $0/month at the scale this project targets (~12k students). See the Cost table in the design spec for the reasoning.
+Everything in this stack — Vercel Hobby, Neon free tier, Vercel Blob free tier, Gmail API, Cloud Pub/Sub free tier, Gemini free tier, Groq free tier, Tavily free tier, Google OAuth — stays at $0/month at the scale this project targets (~12k students). See the Cost table in the design spec for the reasoning.

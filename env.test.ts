@@ -28,8 +28,7 @@ describe("getEnv", () => {
       GMAIL_PUBSUB_VERIFICATION_TOKEN: "secret",
       GOOGLE_GENERATIVE_AI_API_KEY: "key",
       GROQ_API_KEY: "key",
-      GOOGLE_SEARCH_API_KEY: "key",
-      GOOGLE_SEARCH_ENGINE_ID: "id",
+      TAVILY_API_KEY: "key",
       BLOB_READ_WRITE_TOKEN: "token",
       CRON_SECRET: "secret",
     };

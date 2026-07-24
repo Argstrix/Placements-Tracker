@@ -1,9 +1,17 @@
 import { prisma } from "@/db/client";
 import { addAdmin, removeAdmin } from "./actions";
+import { getServerSession } from "next-auth";
+import { buildAuthOptions } from "@/auth/authOptions";
+import { isAuthorized } from "@/auth/isAuthorized";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function ManageAdminsPage() {
+  const session = await getServerSession(buildAuthOptions());
+  const role = session?.user?.email ? (await isAuthorized(session.user.email, prisma)).role : null;
+  if (role !== "admin") notFound();
+
   const admins = await prisma.adminUser.findMany({ orderBy: { createdAt: "asc" } });
   return (
     <main className="max-w-xl mx-auto p-6">

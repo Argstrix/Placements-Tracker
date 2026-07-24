@@ -9,7 +9,19 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getServerSession(buildAuthOptions());
-  if (!session?.user?.email) return <p className="p-6">Please sign in.</p>;
+  if (!session?.user?.email) {
+    return (
+      <div className="view">
+        <div className="phead">
+          <p className="eye">Dashboard</p>
+          <h1>Sign in to see your dashboard</h1>
+        </div>
+        <div className="empty">
+          Sign in with your VIT account to save your Neo ID, track companies, and get shortlist alerts.
+        </div>
+      </div>
+    );
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -24,55 +36,103 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-6">
-      <h1 className="text-xl font-semibold">My Dashboard</h1>
-      <form action={setNeoId} className="flex gap-2 items-end text-sm">
-        <label className="flex flex-col">
-          Your Neo ID (optional, for auto shortlist alerts)
-          <input name="neoId" defaultValue={user?.neoId ?? ""} className="border rounded px-2 py-1 font-mono" />
-        </label>
-        <button type="submit" className="bg-black text-white rounded px-3 py-1">
-          Save
-        </button>
-      </form>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">Your week</p>
+        <h1>Dashboard</h1>
+        <p>Save your Neo ID for automatic shortlist alerts, and keep the companies you care about in one place.</p>
+      </div>
 
-      {shortlistedFor.length > 0 && (
-        <div>
-          <h2 className="font-medium mb-2">You&apos;re shortlisted for:</h2>
-          <ul className="space-y-1">
-            {shortlistedFor.map(
-              (s) =>
-                s.mailEvent.company && (
-                  <li key={s.id}>
-                    <Link href={`/companies/${s.mailEvent.company.id}`} className="text-blue-600 hover:underline">
-                      {s.mailEvent.company.name}
+      <div className="panel" style={{ marginBottom: 18 }}>
+        <h3>Your Neo ID</h3>
+        <p className="psub">Saved only to match you against incoming shortlists. You can clear it any time below.</p>
+        <form action={setNeoId} className="formrow">
+          <input
+            name="neoId"
+            defaultValue={user?.neoId ?? ""}
+            placeholder="O3D8V4U8"
+            className="mono"
+            aria-label="Your Neo ID"
+            style={{
+              flex: 1,
+              minWidth: 180,
+              padding: "10px 12px",
+              borderRadius: 9,
+              border: "1px solid var(--hair)",
+              background: "var(--card-2)",
+              color: "var(--ink)",
+              letterSpacing: ".1em",
+              textTransform: "uppercase",
+            }}
+          />
+          <button type="submit" className="btn pri">
+            Save Neo ID
+          </button>
+        </form>
+      </div>
+
+      <div className="grid2">
+        <div className="panel">
+          <div className="panelhead">
+            <h3>You&rsquo;re shortlisted</h3>
+            {user?.neoId && <span className="mono">{user.neoId}</span>}
+          </div>
+          {shortlistedFor.length > 0 ? (
+            <div className="results">
+              {shortlistedFor.map(
+                (s) =>
+                  s.mailEvent.company && (
+                    <Link key={s.id} href={`/companies/${s.mailEvent.company.id}`} className="res">
+                      <span className="tick" aria-hidden="true">
+                        ✓
+                      </span>
+                      <div>
+                        <b>{s.mailEvent.company.name}</b>
+                        <small>on the shortlist</small>
+                      </div>
                     </Link>
-                  </li>
-                )
-            )}
-          </ul>
+                  )
+              )}
+            </div>
+          ) : (
+            <div className="empty">
+              {user?.neoId
+                ? "You’re not on any shortlist yet. New ones land through the season."
+                : "Save your Neo ID above to see shortlists you’re on."}
+            </div>
+          )}
         </div>
-      )}
 
-      <div>
-        <h2 className="font-medium mb-2">My tracked companies</h2>
-        <ul className="space-y-1">
-          {user?.interests.map((i) => (
-            <li key={i.id}>
-              <Link href={`/companies/${i.companyId}`} className="text-blue-600 hover:underline">
-                {i.company.name}
-              </Link>
-              <span className="text-gray-500 text-sm ml-2">({i.status})</span>
-            </li>
-          ))}
-        </ul>
+        <div className="panel">
+          <div className="panelhead">
+            <h3>Tracking</h3>
+            <span className="mono">{user?.interests.length ?? 0}</span>
+          </div>
+          {user && user.interests.length > 0 ? (
+            <div className="colist">
+              {user.interests.map((i) => (
+                <Link key={i.id} href={`/companies/${i.companyId}`} className="corow">
+                  <span className="cc">{i.company.name.slice(0, 3).toUpperCase()}</span>
+                  <span className="cn">
+                    <b>{i.company.name}</b>
+                  </span>
+                  <span className="cmeta">
+                    <span className="tag note">{i.status}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty">Open any company and set &ldquo;Track my interest&rdquo; to pin it here.</div>
+          )}
+        </div>
       </div>
 
       {user && (
-        <div className="pt-4 border-t">
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--hair)" }}>
           <DeleteMyDataButton />
         </div>
       )}
-    </main>
+    </div>
   );
 }

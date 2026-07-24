@@ -9,29 +9,69 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const results = q ? await searchNeoId(prisma, q) : [];
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <h1 className="text-xl font-semibold mb-4">Search Neo ID</h1>
-      <form className="mb-6">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="e.g. 3D8V (partial match works)"
-          className="border rounded px-3 py-2 w-full"
-        />
-      </form>
-      {q && results.length === 0 && <p className="text-gray-500 text-sm">No matches for &quot;{q}&quot;.</p>}
-      <ul className="space-y-2">
-        {results.map((r) => (
-          <li key={r.id} className="border rounded p-3 flex justify-between">
-            <span className="font-mono">{r.neoId}</span>
-            {r.mailEvent.company && (
-              <Link href={`/companies/${r.mailEvent.company.id}`} className="text-blue-600 hover:underline">
-                {r.mailEvent.company.name}
-              </Link>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">Shortlist lookup</p>
+        <h1>Check shortlist</h1>
+        <p>
+          Search any Neo ID — full or partial — against every shortlist pulled from the mails, including Excel
+          attachments and IDs listed inline. Nothing you type is stored.
+        </p>
+      </div>
+
+      <div className="panel">
+        <form className="search">
+          <input name="q" defaultValue={q} placeholder="e.g. 3D8V — partial match works" aria-label="Neo ID" />
+          <button type="submit">Check</button>
+        </form>
+        <p className="hint">Enter the first few characters if you only remember part of your ID.</p>
+
+        {q && results.length === 0 && (
+          <div className="results">
+            <div className="empty">
+              No shortlist matches for <b>{q}</b>. New shortlists drop through the season — check back after the next
+              mail lands.
+            </div>
+          </div>
+        )}
+
+        {results.length > 0 && (
+          <div className="results">
+            {results.map((r) =>
+              r.mailEvent.company ? (
+                <Link key={r.id} href={`/companies/${r.mailEvent.company.id}`} className="res">
+                  <span className="tick" aria-hidden="true">
+                    ✓
+                  </span>
+                  <div>
+                    <b>{r.neoId}</b>
+                    <small>found in a shortlist mail</small>
+                  </div>
+                  <span className="stage">{r.mailEvent.company.name}</span>
+                </Link>
+              ) : (
+                <div key={r.id} className="res" style={{ cursor: "default" }}>
+                  <span className="tick" aria-hidden="true">
+                    ✓
+                  </span>
+                  <div>
+                    <b>{r.neoId}</b>
+                    <small>found in a shortlist mail</small>
+                  </div>
+                </div>
+              )
             )}
-          </li>
-        ))}
-      </ul>
-    </main>
+          </div>
+        )}
+      </div>
+
+      <div className="callout" style={{ marginTop: 16 }}>
+        <span className="ci">i</span>
+        <div>
+          Shortlists are read straight from the placement-cell mail. If one just went out, give ingestion a minute to
+          catch up before searching.
+        </div>
+      </div>
+    </div>
   );
 }

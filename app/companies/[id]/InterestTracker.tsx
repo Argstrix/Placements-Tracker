@@ -16,16 +16,24 @@ export default function InterestTracker({ companyId, initialStatus }: { companyI
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <label htmlFor="interest-status" className="text-gray-500">
-        Track my interest:
+    <div className="callout" style={{ alignItems: "center", gap: 12 }}>
+      <label htmlFor="interest-status" className="mono" style={{ fontSize: ".72rem", textTransform: "uppercase", letterSpacing: ".08em" }}>
+        Track my interest
       </label>
       <select
         id="interest-status"
         value={status}
         onChange={(e) => handleChange(e.target.value)}
         disabled={isPending}
-        className="border rounded px-2 py-1"
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: ".82rem",
+          padding: "7px 10px",
+          borderRadius: 8,
+          border: "1px solid var(--hair)",
+          background: "var(--card)",
+          color: "var(--ink)",
+        }}
       >
         <option value="" disabled>
           Not tracked
@@ -36,6 +44,7 @@ export default function InterestTracker({ companyId, initialStatus }: { companyI
           </option>
         ))}
       </select>
+      {isPending && <span className="mono" style={{ fontSize: ".72rem", color: "var(--muted)" }}>saving…</span>}
     </div>
   );
 }

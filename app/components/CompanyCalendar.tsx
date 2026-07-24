@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { Company } from "@prisma/client";
 
+function initials(name: string): string {
+  return name.replace(/[^A-Za-z0-9 ]/g, "").trim().slice(0, 3).toUpperCase() || "—";
+}
+
 export default function CompanyCalendar({ companies }: { companies: Company[] }) {
   const byDate = new Map<string, Company[]>();
   for (const c of companies) {
@@ -9,23 +13,49 @@ export default function CompanyCalendar({ companies }: { companies: Company[] })
     byDate.set(key, [...(byDate.get(key) ?? []), c]);
   }
 
+  if (byDate.size === 0) {
+    return (
+      <div className="empty">
+        No company visits in this range. Try a different month, or widen the date range.
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      {[...byDate.entries()].map(([date, list]) => (
-        <div key={date} className="border rounded p-3">
-          <div className="text-sm font-medium text-gray-500">{date}</div>
-          <ul className="mt-1 space-y-1">
-            {list.map((c) => (
-              <li key={c.id}>
-                <Link href={`/companies/${c.id}`} className="text-blue-600 hover:underline">
-                  {c.name}
+    <div className="feed">
+      {[...byDate.entries()].map(([date, list]) => {
+        const pretty = new Date(date).toLocaleDateString(undefined, {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        });
+        return (
+          <div key={date} className="panel">
+            <div className="panelhead">
+              <h3>{pretty}</h3>
+              <span className="mono">
+                {list.length} visit{list.length > 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="colist">
+              {list.map((c) => (
+                <Link key={c.id} href={`/companies/${c.id}`} className="corow">
+                  <span className="cc">{initials(c.name)}</span>
+                  <span className="cn">
+                    <b>{c.name}</b>
+                    {(c.category || c.ctc) && <small>{[c.category, c.ctc].filter(Boolean).join(" · ")}</small>}
+                  </span>
+                  <span className="cmeta">
+                    <span className="last" aria-hidden="true">
+                      →
+                    </span>
+                  </span>
                 </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-      {byDate.size === 0 && <p className="text-gray-500 text-sm">No visits in this range.</p>}
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { prisma } from "@/db/client";
 import { getCompanyTimeline } from "@/queries/getCompanyTimeline";
 import MailEventCard from "../../components/MailEventCard";
 import InterestTracker from "./InterestTracker";
+import { mailMeta, shortDate } from "../../components/mailMeta";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -21,65 +22,121 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
       })
     : null;
 
+  // The journey, oldest → newest, built straight from the recorded mail.
+  const stations = [...company.mailEvents].sort(
+    (a, b) => a.receivedAt.getTime() - b.receivedAt.getTime()
+  );
+
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{company.name}</h1>
-        {company.category && <p className="text-gray-600">{company.category}</p>}
-        {session && (
-          <div className="mt-2">
-            <InterestTracker companyId={company.id} initialStatus={existingInterest?.status ?? null} />
-          </div>
+    <div className="view">
+      <Link href="/companies" className="btn" style={{ marginBottom: 14 }}>
+        ← All companies
+      </Link>
+
+      <div className="phead">
+        <p className="eye">{company.category ?? "Company"}</p>
+        <h1>{company.name}</h1>
+        {company.eligibleBranches.length > 0 && (
+          <p>Eligible: {company.eligibleBranches.join(", ")}</p>
         )}
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          {company.ctc && (
-            <>
-              <dt className="text-gray-500">CTC</dt>
-              <dd>{company.ctc}</dd>
-            </>
-          )}
-          {company.stipend && (
-            <>
-              <dt className="text-gray-500">Stipend</dt>
-              <dd>{company.stipend}</dd>
-            </>
-          )}
-          {company.eligibleBranches.length > 0 && (
-            <>
-              <dt className="text-gray-500">Branches</dt>
-              <dd>{company.eligibleBranches.join(", ")}</dd>
-            </>
-          )}
-          {company.eligibilityCriteria && (
-            <>
-              <dt className="text-gray-500">Eligibility</dt>
-              <dd>{company.eligibilityCriteria}</dd>
-            </>
-          )}
-        </dl>
-        {company.enrichmentSummary && (
-          <div className="mt-4 text-sm bg-gray-50 border rounded p-3">
-            <p className="text-gray-500 text-xs mb-1">Auto-generated overview (unofficial):</p>
-            <p>{company.enrichmentSummary}</p>
-            <p className="mt-1 text-xs">
+      </div>
+
+      {session && (
+        <div style={{ marginBottom: 18 }}>
+          <InterestTracker companyId={company.id} initialStatus={existingInterest?.status ?? null} />
+        </div>
+      )}
+
+      <div className="stats" style={{ marginBottom: 20 }}>
+        <div className="stat">
+          <div className="n sig">{company.ctc ?? "—"}</div>
+          <div className="l">CTC</div>
+        </div>
+        <div className="stat">
+          <div className="n">{company.stipend ?? "—"}</div>
+          <div className="l">Stipend</div>
+        </div>
+        <div className="stat">
+          <div className="n info">{company.eligibleBranches.length || "—"}</div>
+          <div className="l">Branches</div>
+        </div>
+        <div className="stat">
+          <div className="n">{company.mailEvents.length}</div>
+          <div className="l">Mails on record</div>
+        </div>
+      </div>
+
+      {company.eligibilityCriteria && (
+        <div className="callout" style={{ marginBottom: 18 }}>
+          <span className="ci">i</span>
+          <div>
+            <b>Eligibility:</b> {company.eligibilityCriteria}
+          </div>
+        </div>
+      )}
+
+      {stations.length > 0 && (
+        <div className="panel" style={{ marginBottom: 18 }}>
+          <div className="panelhead">
+            <h3>The journey</h3>
+            <span className="mono">{stations.length} events</span>
+          </div>
+          <div className="line">
+            {stations.map((ev, i) => {
+              const meta = mailMeta(ev.type);
+              const last = i === stations.length - 1;
+              return (
+                <div key={ev.id} className={`stnt done${meta.result ? " result" : ""}${last ? " next" : ""}`}>
+                  <span className="node" />
+                  <div className="st">{meta.label}</div>
+                  <div className="dt">{shortDate(ev.receivedAt)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {company.enrichmentSummary && (
+        <div className="panel" style={{ marginBottom: 18 }}>
+          <div className="panelhead">
+            <h3>Company overview</h3>
+            <span className="mono">auto-generated · unofficial</span>
+          </div>
+          <p style={{ margin: 0, fontSize: ".9rem" }}>{company.enrichmentSummary}</p>
+          {company.enrichmentSources.length > 0 && (
+            <p className="mono" style={{ marginTop: 10, fontSize: ".72rem", color: "var(--muted)" }}>
               Sources:{" "}
               {company.enrichmentSources.map((s, i) => (
-                <a key={s} href={s} className="text-blue-600 underline mr-2" target="_blank" rel="noreferrer">
+                <a key={s} href={s} target="_blank" rel="noreferrer" style={{ color: "var(--info)", marginRight: 8 }}>
                   [{i + 1}]
                 </a>
               ))}
             </p>
-          </div>
-        )}
+          )}
+        </div>
+      )}
+
+      <div className="panelhead">
+        <h3>Mail history</h3>
+        <span className="mono">{company.mailEvents.length} mails</span>
       </div>
-      <div className="space-y-4">
+      <div className="mails">
         {company.mailEvents.map((event) => (
           <MailEventCard key={event.id} event={event} />
         ))}
       </div>
-      <Link href={`/report-issue?companyId=${company.id}`} className="text-sm text-gray-500 hover:underline">
-        Something wrong on this page? Report an issue.
-      </Link>
-    </main>
+
+      <div className="callout" style={{ marginTop: 16 }}>
+        <span className="ci">i</span>
+        <div>
+          Spotted something wrong — a date, CTC, or eligibility that doesn&rsquo;t match the mail?{" "}
+          <Link href={`/report-issue?companyId=${company.id}`} style={{ color: "var(--info)", fontWeight: 600 }}>
+            Report it
+          </Link>{" "}
+          and an admin will re-check the extraction.
+        </div>
+      </div>
+    </div>
   );
 }

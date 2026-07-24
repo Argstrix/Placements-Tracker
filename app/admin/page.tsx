@@ -19,41 +19,67 @@ export default async function AdminPage() {
     prisma.reportedIssue.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { company: true } }),
   ]);
 
+  const ok = logs.filter((l) => l.status === "SUCCESS").length;
+  const failed = logs.filter((l) => l.status === "FAILED").length;
+  const pad = (n: number) => String(n).padStart(2, "0");
+
   return (
-    <main className="max-w-4xl mx-auto p-6 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">Admin Dashboard</h1>
-        <div className="flex gap-4">
-          <Link href="/admin/manual-ingest" className="text-blue-600 hover:underline text-sm">
-            Manual Ingest
-          </Link>
-          <Link href="/admin/manage-admins" className="text-blue-600 hover:underline text-sm">
-            Manage Admins
-          </Link>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">Admin</p>
+        <h1>Ingestion console</h1>
+        <p>What the pipeline has processed, what failed, and what students have flagged. Retry a failed mail below.</p>
+      </div>
+
+      <div className="stats" style={{ marginBottom: 22 }}>
+        <div className="stat">
+          <div className="n sig">{pad(ok)}</div>
+          <div className="l">Ingested OK</div>
+        </div>
+        <div className="stat">
+          <div className={`n${failed ? " crit" : ""}`}>{pad(failed)}</div>
+          <div className="l">Failed</div>
+        </div>
+        <div className="stat">
+          <div className="n amb">{pad(issues.length)}</div>
+          <div className="l">Reported issues</div>
+        </div>
+        <div className="stat">
+          <div className="n info">{pad(logs.length)}</div>
+          <div className="l">Total processed</div>
         </div>
       </div>
 
-      <section>
-        <h2 className="font-medium mb-2">Ingestion Log</h2>
-        <table className="w-full text-sm border-collapse">
+      <div className="panelhead">
+        <h3>Ingestion log</h3>
+        <span className="mono">newest first</span>
+      </div>
+      <div className="tablewrap" style={{ marginBottom: 24 }}>
+        <table className="pb">
           <thead>
-            <tr className="text-left border-b">
-              <th className="py-1">Mail</th>
+            <tr>
+              <th>Gmail message</th>
               <th>Status</th>
               <th>Error</th>
-              <th></th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {logs.map((log) => (
-              <tr key={log.id} className="border-b">
-                <td className="py-1 font-mono text-xs">{log.gmailMessageId}</td>
-                <td className={log.status === "SUCCESS" ? "text-green-600" : "text-red-600"}>{log.status}</td>
-                <td className="text-xs text-gray-500">{log.errorDetail}</td>
+              <tr key={log.id}>
+                <td className="mono">{log.gmailMessageId}</td>
+                <td>
+                  <span className={`stcell ${log.status === "SUCCESS" ? "ok" : "fail"}`}>
+                    {log.status === "SUCCESS" ? "Success" : "Failed"}
+                  </span>
+                </td>
+                <td className="mono" style={{ color: "var(--muted)", fontSize: ".76rem" }}>
+                  {log.errorDetail ?? "—"}
+                </td>
                 <td>
                   {log.status === "FAILED" && (
                     <form action={retryOne.bind(null, log.gmailMessageId)}>
-                      <button type="submit" className="text-blue-600 text-xs">
+                      <button type="submit" className="btn">
                         Retry
                       </button>
                     </form>
@@ -63,30 +89,39 @@ export default async function AdminPage() {
             ))}
             {logs.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-3 text-gray-500 text-sm">
+                <td colSpan={4} style={{ color: "var(--muted)" }}>
                   No mail processed yet.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </section>
+      </div>
 
-      <section>
-        <h2 className="font-medium mb-2">Reported Issues</h2>
-        <ul className="space-y-2">
+      <div className="panelhead">
+        <h3>Reported issues</h3>
+        <span className="mono">{issues.length} total</span>
+      </div>
+      {issues.length === 0 ? (
+        <div className="empty">No reported issues. Student reports from the &ldquo;Report an issue&rdquo; page land here.</div>
+      ) : (
+        <div className="feed">
           {issues.map((i) => (
-            <li key={i.id} className="border rounded p-3 text-sm">
-              <div className="text-gray-500 text-xs">
-                {i.createdAt.toLocaleString()} — {i.reporterEmail}
-                {i.company && ` — ${i.company.name}`}
+            <article key={i.id} className="note">
+              <div className="nmeta">
+                <span>{i.reporterEmail}</span>
+                {i.company && (
+                  <Link href={`/companies/${i.company.id}`} style={{ color: "var(--info)" }}>
+                    {i.company.name}
+                  </Link>
+                )}
+                <span style={{ marginLeft: "auto" }}>{i.createdAt.toLocaleString()}</span>
               </div>
-              <p>{i.description}</p>
-            </li>
+              <p style={{ marginTop: 8 }}>{i.description}</p>
+            </article>
           ))}
-          {issues.length === 0 && <p className="text-gray-500 text-sm">No reported issues.</p>}
-        </ul>
-      </section>
-    </main>
+        </div>
+      )}
+    </div>
   );
 }

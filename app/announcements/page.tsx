@@ -6,16 +6,30 @@ export const dynamic = "force-dynamic";
 export default async function AnnouncementsPage() {
   const notices = await getGeneralNotices(prisma);
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Announcements</h1>
-      {notices.map((n) => (
-        <div key={n.id} className="border rounded p-4">
-          <div className="text-sm text-gray-500">{n.receivedAt.toLocaleString()}</div>
-          <div className="font-medium">{n.subject}</div>
-          <p className="text-sm mt-2 whitespace-pre-wrap">{n.bodyText}</p>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">General notices</p>
+        <h1>Announcements</h1>
+        <p>Placement-cell mail that isn&rsquo;t tied to a single company — deadlines, reminders, and pre-placement talks.</p>
+      </div>
+
+      {notices.length === 0 ? (
+        <div className="empty">No announcements yet. General notices from the placement cell will show up here.</div>
+      ) : (
+        <div className="feed">
+          {notices.map((n) => (
+            <article key={n.id} className="note">
+              <div className="nmeta">
+                <span className="tag note">Notice</span>
+                <span>from {n.sender}</span>
+                <span style={{ marginLeft: "auto" }}>{n.receivedAt.toLocaleString()}</span>
+              </div>
+              <h4>{n.subject}</h4>
+              <p style={{ whiteSpace: "pre-wrap" }}>{n.bodyText}</p>
+            </article>
+          ))}
         </div>
-      ))}
-      {notices.length === 0 && <p className="text-gray-500 text-sm">No announcements yet.</p>}
-    </main>
+      )}
+    </div>
   );
 }

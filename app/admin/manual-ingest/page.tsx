@@ -13,9 +13,16 @@ export default async function ManualIngestPage() {
   if (role !== "admin") notFound();
 
   return (
-    <main className="max-w-xl mx-auto p-6">
-      <h1 className="text-xl font-semibold mb-4">Manual Ingest (.eml)</h1>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">Admin · manual</p>
+        <h1>Manual ingest</h1>
+        <p>
+          Upload a raw <span className="mono">.eml</span> to run it through the exact pipeline the webhook uses — handy
+          for testing extraction on a real mail before it goes live.
+        </p>
+      </div>
       <ManualIngestForm />
-    </main>
+    </div>
   );
 }

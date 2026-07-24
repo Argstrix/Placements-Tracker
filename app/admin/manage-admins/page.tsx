@@ -13,33 +13,72 @@ export default async function ManageAdminsPage() {
   if (role !== "admin") notFound();
 
   const admins = await prisma.adminUser.findMany({ orderBy: { createdAt: "asc" } });
+
   return (
-    <main className="max-w-xl mx-auto p-6">
-      <h1 className="text-xl font-semibold mb-4">Manage Admins</h1>
-      <form action={addAdmin} className="flex gap-2 mb-6">
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="new-admin@example.com"
-          className="border rounded px-3 py-2 flex-1"
-        />
-        <button type="submit" className="bg-black text-white rounded px-4 py-2">
-          Add
-        </button>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">Admin · access</p>
+        <h1>Manage admins</h1>
+        <p>
+          Anyone here can sign in and manage the tracker. The allowlist isn&rsquo;t domain-restricted, so a non-VIT
+          co-maintainer can be added too.
+        </p>
+      </div>
+
+      <form action={addAdmin} className="panel" style={{ marginBottom: 18 }}>
+        <h3>Add an admin</h3>
+        <p className="psub">They&rsquo;ll get access the next time they sign in with Google.</p>
+        <div className="formrow">
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="name@vitstudent.ac.in"
+            className="mono"
+            style={{
+              flex: 1,
+              minWidth: 200,
+              padding: "10px 12px",
+              borderRadius: 9,
+              border: "1px solid var(--hair)",
+              background: "var(--card-2)",
+              color: "var(--ink)",
+            }}
+          />
+          <button type="submit" className="btn pri">
+            Add admin
+          </button>
+        </div>
       </form>
-      <ul className="space-y-2">
-        {admins.map((a) => (
-          <li key={a.id} className="flex justify-between items-center border rounded px-3 py-2">
-            <span>{a.email}</span>
-            <form action={removeAdmin.bind(null, a.id)}>
-              <button type="submit" className="text-red-600 text-sm">
-                Remove
-              </button>
-            </form>
-          </li>
-        ))}
-      </ul>
-    </main>
+
+      <div className="tablewrap">
+        <table className="pb">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Added</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {admins.map((a) => (
+              <tr key={a.id}>
+                <td className="mono">{a.email}</td>
+                <td className="mono" style={{ color: "var(--muted)" }}>
+                  {a.createdAt.toLocaleDateString()}
+                </td>
+                <td>
+                  <form action={removeAdmin.bind(null, a.id)}>
+                    <button type="submit" className="btn danger">
+                      Remove
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

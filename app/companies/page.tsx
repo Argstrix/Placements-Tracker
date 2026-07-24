@@ -33,27 +33,37 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
   const companies = await getCompaniesInRange(prisma, from, to);
 
   return (
-    <main className="max-w-3xl mx-auto p-6">
-      <h1 className="text-xl font-semibold mb-4">Company Visits</h1>
-      <form className="flex gap-2 mb-6 text-sm items-end flex-wrap">
-        <label className="flex flex-col">
-          Month
-          <input type="month" name="month" defaultValue={params.month} className="border rounded px-2 py-1" />
-        </label>
-        <span className="text-gray-400 pb-1">or</span>
-        <label className="flex flex-col">
-          From
-          <input type="date" name="from" defaultValue={params.from} className="border rounded px-2 py-1" />
-        </label>
-        <label className="flex flex-col">
-          To
-          <input type="date" name="to" defaultValue={params.to} className="border rounded px-2 py-1" />
-        </label>
-        <button type="submit" className="bg-black text-white rounded px-3 py-1">
-          Filter
-        </button>
+    <div className="view">
+      <div className="phead">
+        <p className="eye">Company visits</p>
+        <h1>Companies</h1>
+        <p>Drives by visit date. Pick a month or a custom range, then open any company for its full timeline and mail history.</p>
+      </div>
+
+      <form className="panel" style={{ marginBottom: 18 }}>
+        <div className="formrow" style={{ alignItems: "flex-end" }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="month">Month</label>
+            <input id="month" type="month" name="month" defaultValue={params.month} />
+          </div>
+          <span className="mono" style={{ color: "var(--muted)", paddingBottom: 10, fontSize: ".72rem" }}>
+            or
+          </span>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="from">From</label>
+            <input id="from" type="date" name="from" defaultValue={params.from} />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="to">To</label>
+            <input id="to" type="date" name="to" defaultValue={params.to} />
+          </div>
+          <button type="submit" className="btn pri">
+            Filter
+          </button>
+        </div>
       </form>
+
       <CompanyCalendar companies={companies} />
-    </main>
+    </div>
   );
 }

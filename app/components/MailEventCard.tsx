@@ -1,23 +1,38 @@
 import AttachmentViewer from "./attachments/AttachmentViewer";
+import { mailMeta } from "./mailMeta";
 import type { MailEvent, Attachment } from "@prisma/client";
 
 export default function MailEventCard({ event }: { event: MailEvent & { attachments: Attachment[] } }) {
+  const meta = mailMeta(event.type);
   return (
-    <div className="border rounded p-4 space-y-2">
-      <div className="text-xs uppercase tracking-wide text-gray-500">{event.type.replace("_", " ")}</div>
-      <div className="text-sm text-gray-600">
-        <strong>{event.subject}</strong> — {event.receivedAt.toLocaleString()} — from {event.sender}
-      </div>
-      <details className="text-sm">
-        <summary className="cursor-pointer text-blue-600">View original mail</summary>
-        <pre className="whitespace-pre-wrap mt-2 text-gray-700">{event.bodyText}</pre>
-      </details>
-      {event.attachments.map((a) => (
-        <div key={a.id} className="mt-2">
-          <div className="text-xs text-gray-500 mb-1">{a.filename}</div>
-          <AttachmentViewer attachment={a} />
+    <article className="mail">
+      <span className={`mtype ${meta.cls}`} aria-hidden="true" />
+      <div className="mbody">
+        <div className="mmeta">
+          <span className={`tag ${meta.cls}`}>{meta.label}</span>
+          <span className="mdate">{event.receivedAt.toLocaleString()}</span>
+          <span className="mdate" style={{ marginLeft: "auto" }}>
+            from {event.sender}
+          </span>
         </div>
-      ))}
-    </div>
+        <h4>{event.subject}</h4>
+        <details style={{ marginTop: 8 }}>
+          <summary className="mono" style={{ cursor: "pointer", color: "var(--info)", fontSize: ".78rem" }}>
+            View original mail
+          </summary>
+          <pre className="mono" style={{ whiteSpace: "pre-wrap", marginTop: 8, fontSize: ".78rem", color: "var(--muted)" }}>
+            {event.bodyText}
+          </pre>
+        </details>
+        {event.attachments.map((a) => (
+          <div key={a.id} style={{ marginTop: 10 }}>
+            <div className="mono" style={{ fontSize: ".72rem", color: "var(--muted)", marginBottom: 6 }}>
+              {a.filename}
+            </div>
+            <AttachmentViewer attachment={a} />
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }

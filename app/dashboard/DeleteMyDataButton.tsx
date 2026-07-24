@@ -11,8 +11,8 @@ export default function DeleteMyDataButton() {
         }
       }}
     >
-      <button type="submit" className="text-red-600 text-sm hover:underline">
-        Delete my data (Neo ID + tracked interests)
+      <button type="submit" className="btn danger">
+        Delete my data — Neo ID &amp; tracked interests
       </button>
     </form>
   );

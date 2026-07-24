@@ -1,0 +1,14 @@
+# Raw sample mail data — never publish real student data
+sample-emails/
+
+# Env / secrets
+.env
+.env*.local
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel/
+*.log
+.DS_Store

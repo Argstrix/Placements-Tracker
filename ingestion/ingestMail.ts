@@ -82,6 +82,32 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
 
         if (match.companyId) {
           companyId = match.companyId;
+
+          // A follow-up mail (e.g. a revised CTC, updated eligibility, a
+          // rescheduled date) links to this same company's timeline, but
+          // until now its top-level fields were never refreshed — the
+          // company page would keep showing stale data from the original
+          // registration mail even after an update mail arrived. Merge in
+          // whatever new non-empty values this mail provides; anything it
+          // doesn't mention (null / empty array) leaves the prior value
+          // alone rather than wiping it out.
+          const existingCompany = await tx.company.findUniqueOrThrow({ where: { id: match.companyId } });
+          const existingFieldConfidence = (existingCompany.fieldConfidence ?? {}) as Record<string, "HIGH" | "LOW">;
+          await tx.company.update({
+            where: { id: match.companyId },
+            data: {
+              category: extraction.category ?? existingCompany.category,
+              campuses: extraction.campuses.length > 0 ? extraction.campuses : existingCompany.campuses,
+              ctc: extraction.ctc ?? existingCompany.ctc,
+              stipend: extraction.stipend ?? existingCompany.stipend,
+              eligibilityCriteria: extraction.eligibilityCriteria ?? existingCompany.eligibilityCriteria,
+              eligibleBranches:
+                extraction.eligibleBranches.length > 0 ? extraction.eligibleBranches : existingCompany.eligibleBranches,
+              visitDate: extraction.visitDate ? new Date(extraction.visitDate) : existingCompany.visitDate,
+              website: extraction.website ?? existingCompany.website,
+              fieldConfidence: { ...existingFieldConfidence, ...extraction.fieldConfidence },
+            },
+          });
         } else {
           const created = await tx.company.create({
             data: {

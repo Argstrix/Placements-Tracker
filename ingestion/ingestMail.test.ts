@@ -148,6 +148,60 @@ describe("ingestMail", () => {
     expect(companies).toHaveLength(1);
   });
 
+  it("updates the existing company's fields when a follow-up mail revises them (e.g. a CTC update)", async () => {
+    const existing = await db.company.create({
+      data: {
+        name: "Wakefit",
+        normalizedName: "wakefit",
+        ctc: "10 LPA",
+        eligibleBranches: ["B.Tech CSE"],
+        eligibilityCriteria: "60% throughout",
+      },
+    });
+
+    const raw = readFileSync(path.join(fixturesDir, "Shortlist mail 3.eml"));
+    const updateJson = JSON.stringify({
+      eventType: "UPDATE",
+      companyName: "Wakefit",
+      category: null,
+      campuses: [],
+      visitDate: null,
+      eligibleBranches: [],
+      eligibilityCriteria: null,
+      ctc: "12 LPA (revised)",
+      stipend: null,
+      venue: null,
+      instructions: "CTC has been revised, please re-check your eligibility.",
+      website: null,
+      fieldConfidence: { ctc: "HIGH" },
+    });
+
+    const result = await ingestMail(raw, "msg-update-1", {
+      db,
+      llmClients: {
+        primary: new FakeListChatModel({ responses: [updateJson] }),
+        fallback: new FakeListChatModel({ responses: [updateJson] }),
+      },
+      uploadAttachment: async () => "https://blob.example/fake.xlsx",
+    });
+
+    expect(result.status).toBe("SUCCESS");
+    expect(result.newCompanyId).toBeUndefined(); // matched, not created
+
+    const updated = await db.company.findUniqueOrThrow({ where: { id: existing.id } });
+    expect(updated.ctc).toBe("12 LPA (revised)"); // the field the update mail actually mentioned
+    expect(updated.eligibleBranches).toEqual(["B.Tech CSE"]); // untouched — the update mail didn't mention it
+    expect(updated.eligibilityCriteria).toBe("60% throughout"); // untouched
+    expect((updated.fieldConfidence as Record<string, string>).ctc).toBe("HIGH");
+
+    // The update mail itself is still visible as its own timeline entry.
+    const events = await db.mailEvent.findMany({ where: { companyId: existing.id } });
+    expect(events.map((e) => e.type)).toContain("UPDATE");
+
+    const companies = await db.company.findMany();
+    expect(companies).toHaveLength(1); // no duplicate company created
+  });
+
   it("fires onNewCompany only when a brand-new company is created, not on a match", async () => {
     const raw = readFileSync(path.join(fixturesDir, "Placement Registration - Sample.eml"));
     const newCompanyCalls: { id: string; name: string }[] = [];

@@ -3,6 +3,7 @@ import { parseMail, type ParsedAttachment } from "./parseMail";
 import { tryRegexExtract } from "./regexExtractor";
 import { extractWithLlm, type LlmClients } from "./llmExtractor";
 import { extractNeoIdsFromXlsx } from "./xlsxExtractor";
+import { extractNeoIdsFromBody } from "./inlineNeoIdExtractor";
 import { matchCompany, normalizeCompanyName } from "./matchCompany";
 
 export interface IngestOptions {
@@ -58,9 +59,16 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
       mail.attachments.map(async (att) => ({ ...att, blobUrl: await uploadAttachment(att) }))
     );
 
-    const shortlistEntries = uploadedAttachments
+    const xlsxShortlistEntries = uploadedAttachments
       .filter((a) => a.mimeType === XLSX_MIME)
       .flatMap((a) => extractNeoIdsFromXlsx(a));
+
+    // Some shortlist mails (e.g. the Fischer Jordan format) paste Neo IDs
+    // directly into the body instead of attaching a sheet — only scan the
+    // body when there's no xlsx attachment already supplying the list, to
+    // avoid double-counting mails that include both.
+    const shortlistEntries =
+      xlsxShortlistEntries.length > 0 ? xlsxShortlistEntries : extractNeoIdsFromBody(mail.bodyText);
 
     const { mailEventId, newCompany } = await db.$transaction(async (tx) => {
       let companyId: string | null = null;

@@ -35,6 +35,38 @@ describe("ingestMail", () => {
     expect(log?.status).toBe("SUCCESS");
   });
 
+  it("extracts inline Neo IDs from the real Fischer Jordan body-text shortlist (no attachment)", async () => {
+    const raw = readFileSync(path.join(fixturesDir, "Short list mail - 1.eml"));
+    const validJson = JSON.stringify({
+      eventType: "SHORTLIST_ROUND",
+      companyName: "Fischer Jordan",
+      category: null,
+      campuses: ["Vellore"],
+      visitDate: "2026-07-24",
+      eligibleBranches: [],
+      eligibilityCriteria: null,
+      ctc: null,
+      stipend: null,
+      venue: "PRP - 717",
+      instructions: null,
+      website: null,
+      fieldConfidence: {},
+    });
+    const result = await ingestMail(raw, "msg-fj", {
+      db,
+      llmClients: {
+        primary: new FakeListChatModel({ responses: [validJson] }),
+        fallback: new FakeListChatModel({ responses: [validJson] }),
+      },
+      uploadAttachment: async () => "https://blob.example/unused",
+    });
+
+    expect(result.status).toBe("SUCCESS");
+    const entries = await db.shortlistEntry.findMany();
+    expect(entries.length).toBeGreaterThanOrEqual(14);
+    expect(entries.map((e) => e.neoId)).toContain("O3D8V4U8");
+  });
+
   it("extracts Neo IDs into ShortlistEntry rows from an xlsx-attached shortlist mail", async () => {
     const raw = readFileSync(path.join(fixturesDir, "Shortlist mail 3.eml"));
     const validJson = JSON.stringify({

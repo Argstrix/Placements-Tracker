@@ -36,6 +36,34 @@ describe("addAdmin server action", () => {
     const admins = await (prisma as Awaited<ReturnType<typeof createTestPrismaClient>>).adminUser.findMany();
     expect(admins.map((a) => a.email)).toContain("newadmin@gmail.com");
   });
+
+  it("rejects an invalid email format", async () => {
+    mockGetSessionEmail.mockResolvedValue("owner@gmail.com");
+    const { addAdmin } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    const before = await db.adminUser.count();
+    const formData = new FormData();
+    formData.set("email", "not-an-email");
+    await expect(addAdmin(formData)).rejects.toThrow(/valid email/i);
+
+    expect(await db.adminUser.count()).toBe(before);
+  });
+
+  it("rejects adding an email that's already an admin", async () => {
+    mockGetSessionEmail.mockResolvedValue("owner@gmail.com");
+    const { addAdmin } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    const before = await db.adminUser.count();
+    const formData = new FormData();
+    formData.set("email", "owner@gmail.com");
+    await expect(addAdmin(formData)).rejects.toThrow(/already an admin/i);
+
+    expect(await db.adminUser.count()).toBe(before);
+  });
 });
 
 describe("removeAdmin server action", () => {

@@ -12,9 +12,21 @@ async function requireAdmin(): Promise<string> {
   return email;
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function addAdmin(formData: FormData): Promise<void> {
   const actingEmail = await requireAdmin();
-  const newEmail = String(formData.get("email")).toLowerCase();
+  const raw = formData.get("email");
+  const newEmail = raw ? String(raw).trim().toLowerCase() : "";
+  if (!EMAIL_PATTERN.test(newEmail)) {
+    throw new Error("Enter a valid email address");
+  }
+
+  const existing = await prisma.adminUser.findUnique({ where: { email: newEmail } });
+  if (existing) {
+    throw new Error(`${newEmail} is already an admin`);
+  }
+
   await prisma.adminUser.create({ data: { email: newEmail, addedBy: actingEmail } });
   revalidatePath("/admin/manage-admins");
 }

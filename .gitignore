@@ -14,3 +14,7 @@ out/
 .DS_Store
 *.tsbuildinfo
 
+# Windows/WSL copy artifacts
+*:Zone.Identifier
+*:OECustomProperty
+

@@ -24,10 +24,24 @@ enum ConfidenceLevel {
   LOW
 }
 
+// B.Tech and M.Tech drives arrive on the same mailing list but are separate
+// drives with their own CTC and eligibility. BOTH is for a single drive open
+// to each, not for "this company recruits from both" — that case is two rows.
+enum Program {
+  BTECH
+  MTECH
+  BOTH
+}
+
 model Company {
   id                  String    @id @default(cuid())
   name                String
-  normalizedName      String    @unique
+  // Not unique on its own: the same company can run a B.Tech drive and an
+  // M.Tech drive with different packages, and collapsing them into one row
+  // would let a student read the wrong programme's CTC. Uniqueness is on the
+  // (name, programme) pair instead — see @@unique below.
+  normalizedName      String
+  program             Program   @default(BOTH)
   category            String?
   campuses            String[]
   ctc                 String?
@@ -57,7 +71,9 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([normalizedName, program])
   @@index([retiredAt])
+  @@index([program])
 }
 
 model MailEvent {

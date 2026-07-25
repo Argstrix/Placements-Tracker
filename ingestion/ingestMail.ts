@@ -38,6 +38,7 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
       ? {
           eventType: "REGISTRATION" as const,
           companyName: fastPath.companyName ?? null,
+          program: fastPath.program ?? null,
           category: fastPath.category ?? null,
           campuses: [] as string[],
           visitDate: null as string | null,
@@ -89,8 +90,24 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
       let createdCompany: { id: string; name: string } | null = null;
 
       if (extraction.companyName) {
-        const existing = await tx.company.findMany({ select: { id: true, normalizedName: true } });
-        const match = matchCompany(extraction.companyName, existing);
+        // lastMailAt only breaks ties when a mail doesn't state its programme
+        // and the company runs both a B.Tech and an M.Tech drive.
+        const existing = (
+          await tx.company.findMany({
+            select: {
+              id: true,
+              normalizedName: true,
+              program: true,
+              mailEvents: { select: { receivedAt: true }, orderBy: { receivedAt: "desc" }, take: 1 },
+            },
+          })
+        ).map((c) => ({
+          id: c.id,
+          normalizedName: c.normalizedName,
+          program: c.program,
+          lastMailAt: c.mailEvents[0]?.receivedAt ?? null,
+        }));
+        const match = matchCompany(extraction.companyName, existing, extraction.program);
         companyMatchConfidence = match.confidence;
 
         if (match.companyId) {
@@ -133,6 +150,10 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
             data: {
               name: extraction.companyName,
               normalizedName: normalizeCompanyName(extraction.companyName),
+              // An unstated programme on a brand-new company means we genuinely
+              // don't know — BOTH keeps the drive visible to everyone rather
+              // than hiding it from half the batch on a guess.
+              program: extraction.program ?? "BOTH",
               category: extraction.category,
               campuses: extraction.campuses,
               ctc: extraction.ctc,

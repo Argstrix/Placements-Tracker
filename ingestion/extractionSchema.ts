@@ -32,6 +32,9 @@ const FieldConfidenceSchema = z.object({
 export const ExtractionSchema = z.object({
   eventType: z.enum(["REGISTRATION", "SHORTLIST_ROUND", "RESULT", "UPDATE", "GENERAL_NOTICE"]),
   companyName: z.string().nullable(),
+  // Nullable on purpose: a follow-up mail that never says which programme it
+  // concerns must report that honestly rather than have the model pick one.
+  program: z.enum(["BTECH", "MTECH", "BOTH"]).nullable(),
   category: z.string().nullable(),
   campuses: z.array(z.string()),
   visitDate: z.string().nullable(),

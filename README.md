@@ -28,6 +28,18 @@ Full design rationale lives in [`docs/superpowers/specs/2026-07-24-placement-tra
 
 Every external service used has a free tier that comfortably covers this project's volume — see the Cost table in the design spec.
 
+## Dependency overrides
+
+`package.json` pins a few transitive dependencies. They are not cosmetic — removing them reintroduces known advisories, so `npm audit` should stay at zero:
+
+| Override | Why |
+|---|---|
+| `gaxios@^7.3.0` | `googleapis-common` pins `gaxios@7.1.3`, which drags in `rimraf → glob → minimatch → brace-expansion` and the GHSA-mh99-v99m-4gvg DoS. 7.3.0 dropped `rimraf` entirely, removing the chain rather than patching its leaf. |
+| `minimatch@^10.2.5` | The `eslint-plugin-*` packages bundled inside `eslint-config-next` pin `minimatch@3`, which can only use the vulnerable `brace-expansion@1.x`. |
+| `brace-expansion@^5.0.8` | `5.0.8` is the only patched release — there is no `1.1.17`/`2.1.3` backport, so every earlier version across all majors is affected. |
+
+Note that `brace-expansion@5` cannot be forced on its own: `minimatch@3` does `require('brace-expansion')` expecting a bare function, and v5's CommonJS build exports a namespace, giving `TypeError: expand is not a function`. The `minimatch` override is what makes the `brace-expansion` one safe, so the two must move together.
+
 ## Local development
 
 ```bash

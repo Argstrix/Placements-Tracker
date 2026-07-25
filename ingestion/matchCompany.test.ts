@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchCompany, normalizeCompanyName } from "./matchCompany";
+import { matchCompany, normalizeCompanyName, type CompanyCandidate } from "./matchCompany";
 
 describe("normalizeCompanyName", () => {
   it("lowercases and strips common suffixes/whitespace", () => {
@@ -8,20 +8,22 @@ describe("normalizeCompanyName", () => {
   });
 });
 
+function candidate(over: Partial<CompanyCandidate> & { id: string; normalizedName: string }): CompanyCandidate {
+  return { program: "BOTH", lastMailAt: null, ...over };
+}
+
 describe("matchCompany", () => {
-  const existing = [
-    { id: "1", normalizedName: "fischer jordan" },
-    { id: "2", normalizedName: "idfc first bank" },
+  const existing: CompanyCandidate[] = [
+    candidate({ id: "1", normalizedName: "fischer jordan" }),
+    candidate({ id: "2", normalizedName: "idfc first bank" }),
   ];
 
   it("matches an exact normalized name with HIGH confidence", () => {
-    const result = matchCompany("Fischer Jordan", existing);
-    expect(result).toEqual({ companyId: "1", confidence: "HIGH" });
+    expect(matchCompany("Fischer Jordan", existing)).toEqual({ companyId: "1", confidence: "HIGH" });
   });
 
   it("normalizes away common company suffixes as an exact match", () => {
-    const result = matchCompany("Fischer Jordan Pvt Ltd", existing);
-    expect(result).toEqual({ companyId: "1", confidence: "HIGH" });
+    expect(matchCompany("Fischer Jordan Pvt Ltd", existing)).toEqual({ companyId: "1", confidence: "HIGH" });
   });
 
   it("matches a misspelled variant with LOW confidence", () => {
@@ -31,7 +33,48 @@ describe("matchCompany", () => {
   });
 
   it("returns no match for a genuinely new company", () => {
-    const result = matchCompany("Wakefit", existing);
-    expect(result).toEqual({ companyId: null, confidence: null });
+    expect(matchCompany("Wakefit", existing)).toEqual({ companyId: null, confidence: null });
+  });
+});
+
+describe("matchCompany — programme separation", () => {
+  const btech = candidate({ id: "b", normalizedName: "infosys", program: "BTECH", lastMailAt: new Date("2026-06-01") });
+  const mtech = candidate({ id: "m", normalizedName: "infosys", program: "MTECH", lastMailAt: new Date("2026-06-10") });
+
+  it("routes a stated programme to its own drive", () => {
+    expect(matchCompany("Infosys", [btech, mtech], "BTECH")).toEqual({ companyId: "b", confidence: "HIGH" });
+    expect(matchCompany("Infosys", [btech, mtech], "MTECH")).toEqual({ companyId: "m", confidence: "HIGH" });
+  });
+
+  it("treats a company known only under the other programme as a new drive", () => {
+    // Creating a second row is right here — an M.Tech drive is genuinely not
+    // the B.Tech one, and merging them would corrupt both packages.
+    expect(matchCompany("Infosys", [btech], "MTECH")).toEqual({ companyId: null, confidence: null });
+  });
+
+  it("attaches a programme-specific mail to a combined drive", () => {
+    const both = candidate({ id: "x", normalizedName: "infosys", program: "BOTH" });
+    expect(matchCompany("Infosys", [both], "BTECH")).toEqual({ companyId: "x", confidence: "HIGH" });
+  });
+
+  it("links an unstated programme by name when that is unambiguous", () => {
+    expect(matchCompany("Infosys", [btech], null)).toEqual({ companyId: "b", confidence: "HIGH" });
+  });
+
+  it("falls back to the most recently active drive, flagged LOW, when ambiguous", () => {
+    // The realistic case: "Infosys — Shortlist Round 2" with no programme named
+    // and both drives running. A wrong guess must be visible, not silent.
+    expect(matchCompany("Infosys", [btech, mtech], null)).toEqual({ companyId: "m", confidence: "LOW" });
+  });
+
+  it("never reports HIGH on a fuzzy name match even when the programme lines up", () => {
+    const result = matchCompany("Infosyss", [btech, mtech], "BTECH");
+    expect(result.companyId).toBe("b");
+    expect(result.confidence).toBe("LOW");
+  });
+
+  it("keeps unrelated companies out of the ambiguity tie-break", () => {
+    const other = candidate({ id: "z", normalizedName: "wakefit", program: "MTECH", lastMailAt: new Date("2026-07-01") });
+    expect(matchCompany("Infosys", [btech, other], null)).toEqual({ companyId: "b", confidence: "HIGH" });
   });
 });

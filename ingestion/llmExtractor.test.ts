@@ -14,6 +14,7 @@ const sampleMail: ParsedMail = {
 
 const validJsonResponse = JSON.stringify({
   eventType: "SHORTLIST_ROUND",
+  program: "BTECH",
   companyName: "Wakefit",
   category: null,
   campuses: ["Vellore"],

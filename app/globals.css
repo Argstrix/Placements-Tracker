@@ -226,6 +226,12 @@ a { color: inherit; }
 .mail .mmeta{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .tag{ font-family:var(--font-mono); font-size:.6rem; letter-spacing:.08em; text-transform:uppercase; font-weight:700; padding:2px 7px; border-radius:5px; }
 .tag.reg{ color:var(--info); background:color-mix(in srgb,var(--info) 12%,transparent);} .tag.short{ color:var(--accent-text); background:color-mix(in srgb,var(--signal) 16%,transparent);} .tag.res{ color:var(--info); background:color-mix(in srgb,var(--info) 12%,transparent);} .tag.upd{ color:var(--amber); background:color-mix(in srgb,var(--amber) 14%,transparent);} .tag.note{ color:var(--muted); background:var(--card-2);}
+/* Programme badges. B.Tech and M.Tech drives are separate drives with separate
+   packages, so these must read as distinct at a glance, not decorative. */
+.tag.prog-btech{ color:var(--info); background:color-mix(in srgb,var(--info) 12%,transparent); }
+.tag.prog-mtech{ color:var(--amber); background:color-mix(in srgb,var(--amber) 14%,transparent); }
+.tag.prog-both{ color:var(--muted); background:var(--card-2); }
+.corow .cn b .tag, .phead h1 .tag{ vertical-align:middle; margin-left:8px; }
 .mail .mdate{ font-family:var(--font-mono); font-size:.72rem; color:var(--muted); }
 .mail .flag{ font-family:var(--font-mono); font-size:.6rem; letter-spacing:.06em; text-transform:uppercase; color:var(--amber); border:1px solid color-mix(in srgb,var(--amber) 45%,transparent); border-radius:4px; padding:1px 5px; }
 .mail h4{ margin:7px 0 3px; font-size:.95rem; }

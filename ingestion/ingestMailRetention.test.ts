@@ -12,10 +12,11 @@ function eml(subject: string, body = "body"): Buffer {
   );
 }
 
-function extraction(companyName: string | null, eventType = "UPDATE") {
+function extraction(companyName: string | null, eventType = "UPDATE", program: string | null = null) {
   return JSON.stringify({
     eventType,
     companyName,
+    program,
     category: null,
     campuses: [],
     visitDate: null,

@@ -8,6 +8,12 @@ interface RangeParams {
   from?: string;
   to?: string;
   month?: string;
+  program?: string;
+}
+
+/** Anything other than the two real programmes means "no filter". */
+function parseProgram(value: string | undefined): "BTECH" | "MTECH" | undefined {
+  return value === "BTECH" || value === "MTECH" ? value : undefined;
 }
 
 function parseRange(searchParams: RangeParams): { from: Date; to: Date } {
@@ -30,7 +36,8 @@ function parseRange(searchParams: RangeParams): { from: Date; to: Date } {
 export default async function CompaniesPage({ searchParams }: { searchParams: Promise<RangeParams> }) {
   const params = await searchParams;
   const { from, to } = parseRange(params);
-  const companies = await getCompaniesInRange(prisma, from, to);
+  const program = parseProgram(params.program);
+  const companies = await getCompaniesInRange(prisma, from, to, program);
 
   return (
     <div className="view">
@@ -56,6 +63,16 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
           <div className="field" style={{ marginBottom: 0 }}>
             <label htmlFor="to">To</label>
             <input id="to" type="date" name="to" defaultValue={params.to} />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="program">Programme</label>
+            {/* Selecting a programme still shows drives open to both — they're
+                ones this student is eligible for. */}
+            <select id="program" name="program" defaultValue={program ?? ""}>
+              <option value="">All</option>
+              <option value="BTECH">B.Tech</option>
+              <option value="MTECH">M.Tech</option>
+            </select>
           </div>
           <button type="submit" className="btn pri">
             Filter

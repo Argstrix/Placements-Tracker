@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Company } from "@prisma/client";
+import ProgramBadge from "./ProgramBadge";
 
 function initials(name: string): string {
   return name.replace(/[^A-Za-z0-9 ]/g, "").trim().slice(0, 3).toUpperCase() || "—";
@@ -42,7 +43,9 @@ export default function CompanyCalendar({ companies }: { companies: Company[] })
                 <Link key={c.id} href={`/companies/${c.id}`} className="corow">
                   <span className="cc">{initials(c.name)}</span>
                   <span className="cn">
-                    <b>{c.name}</b>
+                    <b>
+                      {c.name} <ProgramBadge program={c.program} />
+                    </b>
                     {(c.category || c.ctc) && <small>{[c.category, c.ctc].filter(Boolean).join(" · ")}</small>}
                   </span>
                   <span className="cmeta">

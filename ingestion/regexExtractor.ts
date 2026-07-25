@@ -1,8 +1,10 @@
 import type { ParsedMail } from "./parseMail";
+import { classifyProgram, type Program } from "./classifyProgram";
 
 export interface FastPathResult {
   matched: boolean;
   companyName?: string;
+  program?: Program | null;
   category?: string;
   ctc?: string;
   stipend?: string;
@@ -39,6 +41,11 @@ export function tryRegexExtract(mail: ParsedMail): FastPathResult {
   const eligibilityMatch = body.match(/Eligibility Criteria\s*\n+([\s\S]*?)\n\s*\n\s*\n/i);
   const eligibilityCriteria = eligibilityMatch?.[1]?.trim();
 
+  // Programme is read from the subject as well as the body — plenty of mails
+  // put "B.Tech" only in the subject line — and from the eligibility text,
+  // which is where branch-level programme markers live.
+  const program = classifyProgram(`${mail.subject}\n${body}`);
+
   // Require the two most load-bearing fields before trusting the fast path;
   // anything less structured should fall through to the LLM.
   const matched = Boolean(companyName && (ctc || eligibilityCriteria));
@@ -46,6 +53,7 @@ export function tryRegexExtract(mail: ParsedMail): FastPathResult {
   return {
     matched,
     companyName,
+    program,
     category,
     ctc,
     stipend,

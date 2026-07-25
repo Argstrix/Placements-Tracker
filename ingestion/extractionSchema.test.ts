@@ -63,6 +63,7 @@ describe("ExtractionSchema", () => {
     const parsed = ExtractionSchema.parse({
       eventType: "REGISTRATION",
       companyName: "Wakefit",
+      program: "BTECH",
       category: "Super Dream",
       campuses: ["Vellore"],
       visitDate: "2026-08-01",
@@ -82,6 +83,8 @@ describe("ExtractionSchema", () => {
     const parsed = ExtractionSchema.parse({
       eventType: "GENERAL_NOTICE",
       companyName: null,
+      // A mail that never names a programme must be able to say so.
+      program: null,
       category: null,
       campuses: [],
       visitDate: null,

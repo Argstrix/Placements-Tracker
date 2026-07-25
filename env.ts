@@ -23,6 +23,12 @@ const envSchema = z.object({
   // Storage-reclamation tunables. Unlike everything above these are optional:
   // the defaults are the intended operating values, and an unset variable must
   // not be a startup failure.
+  // Only mail received strictly after this instant is ingested. Guards the
+  // first Pub/Sub push from pulling in the entire label history — placements
+  // for this batch start in June 2026, so anything older is a different batch's
+  // data we have no business publishing.
+  INGEST_AFTER: z.coerce.date().default(new Date("2026-05-31T23:59:59.999Z")),
+
   RETIRE_AFTER_RESULT_DAYS: z.coerce.number().int().positive().default(30),
   RETIRE_AFTER_IDLE_DAYS: z.coerce.number().int().positive().default(120),
   RECLAIM_BATCH_SIZE: z.coerce.number().int().positive().default(200),

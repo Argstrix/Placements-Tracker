@@ -22,6 +22,7 @@ describe("syncNewMailFromLabel", () => {
           responses: [
             JSON.stringify({
               eventType: "GENERAL_NOTICE",
+              program: null,
               companyName: null,
               category: null,
               campuses: [],

@@ -15,10 +15,26 @@ export async function fetchGmailMessageRaw(messageId: string, env: Env): Promise
   return Buffer.from(raw, "base64url");
 }
 
-/** Message IDs currently under the watched label, newest first. */
+/**
+ * Message IDs currently under the watched label, newest first, restricted to
+ * mail received after INGEST_AFTER.
+ *
+ * The cutoff is applied here, in the Gmail query, rather than after fetching:
+ * Gmail then never returns older IDs at all, so the webhook and the daily cron
+ * are both covered by this one filter and no pre-cutoff mail is ever
+ * downloaded. Expressed as epoch seconds rather than `after:YYYY/MM/DD`, which
+ * Gmail interprets in the account's local timezone and would make the boundary
+ * ambiguous by up to a day.
+ */
 export async function listLabeledMessageIds(env: Env): Promise<string[]> {
   const gmail = buildGmailApiClient(env);
-  const res = await gmail.users.messages.list({ userId: "me", labelIds: [env.GMAIL_LABEL_ID], maxResults: 50 });
+  const afterEpochSeconds = Math.floor(env.INGEST_AFTER.getTime() / 1000);
+  const res = await gmail.users.messages.list({
+    userId: "me",
+    labelIds: [env.GMAIL_LABEL_ID],
+    q: `after:${afterEpochSeconds}`,
+    maxResults: 50,
+  });
   return (res.data.messages ?? []).map((m) => m.id).filter((id): id is string => Boolean(id));
 }
 

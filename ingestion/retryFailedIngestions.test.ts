@@ -10,6 +10,7 @@ const generalNoticeEml = Buffer.from(
 
 const validJson = JSON.stringify({
   eventType: "GENERAL_NOTICE",
+  program: null,
   companyName: null,
   category: null,
   campuses: [],

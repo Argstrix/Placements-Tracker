@@ -28,7 +28,9 @@ describe("ingestMail", () => {
     });
 
     expect(result.status).toBe("SUCCESS");
-    const company = await db.company.findUnique({ where: { normalizedName: "idfc first bank" } });
+    // normalizedName is no longer unique on its own — a company can run a
+    // separate drive per programme — so look it up by name alone.
+    const company = await db.company.findFirst({ where: { normalizedName: "idfc first bank" } });
     expect(company).not.toBeNull();
     expect(company?.eligibleBranches).toEqual(expect.arrayContaining(["B.Tech IT", "B.Tech CSE"]));
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/db/client";
 import { getCompanyTimeline } from "@/queries/getCompanyTimeline";
 import MailEventCard from "../../components/MailEventCard";
+import ProgramBadge from "../../components/ProgramBadge";
 import InterestTracker from "./InterestTracker";
 import { mailMeta, shortDate } from "../../components/mailMeta";
 import { notFound } from "next/navigation";
@@ -35,7 +36,11 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
 
       <div className="phead">
         <p className="eye">{company.category ?? "Company"}</p>
-        <h1>{company.name}</h1>
+        <h1>
+          {company.name} <ProgramBadge program={company.program} />
+        </h1>
+        {/* The same company can run a separate drive for the other programme
+            with a different package, so the badge is load-bearing here. */}
         {company.eligibleBranches.length > 0 && (
           <p>Eligible: {company.eligibleBranches.join(", ")}</p>
         )}

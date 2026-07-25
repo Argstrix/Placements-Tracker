@@ -1,8 +1,12 @@
 import { distance } from "fastest-levenshtein";
+import type { Program } from "./classifyProgram";
 
 export interface CompanyCandidate {
   id: string;
   normalizedName: string;
+  program: Program;
+  /** Most recent mail on this drive, used only to break program ambiguity. */
+  lastMailAt: Date | null;
 }
 
 export interface MatchResult {
@@ -21,25 +25,76 @@ export function normalizeCompanyName(name: string): string {
     .trim();
 }
 
+function mostRecent(candidates: CompanyCandidate[]): CompanyCandidate {
+  return candidates.reduce((newest, c) =>
+    (c.lastMailAt?.getTime() ?? 0) > (newest.lastMailAt?.getTime() ?? 0) ? c : newest
+  );
+}
+
+/**
+ * Picks the drive a mail belongs to, among rows sharing a company name.
+ *
+ * A stated programme selects its own drive, falling back to a combined BOTH
+ * drive. An unstated programme is the common case — shortlist and result mails
+ * rarely restate it — so it resolves by name alone when that is unambiguous,
+ * and otherwise attaches to the drive with the most recent activity and drops
+ * confidence to LOW, which renders the mail flagged rather than letting a
+ * wrong guess pass silently.
+ */
+function selectByProgram(sameName: CompanyCandidate[], program: Program | null): MatchResult {
+  if (sameName.length === 0) return { companyId: null, confidence: null };
+
+  if (program) {
+    const exact = sameName.find((c) => c.program === program);
+    if (exact) return { companyId: exact.id, confidence: "HIGH" };
+
+    // A B.Tech-only mail for a drive recorded as open to both still belongs
+    // to that drive.
+    const both = sameName.find((c) => c.program === "BOTH");
+    if (both) return { companyId: both.id, confidence: "HIGH" };
+
+    // The name exists but only under a different programme — a genuinely new
+    // drive, so report no match and let the caller create one.
+    return { companyId: null, confidence: null };
+  }
+
+  if (sameName.length === 1) return { companyId: sameName[0].id, confidence: "HIGH" };
+  return { companyId: mostRecent(sameName).id, confidence: "LOW" };
+}
+
 // A normalized-name edit distance of up to 20% of the shorter string's
 // length is treated as "the same company, imprecisely written" rather than
 // a different company entirely.
-export function matchCompany(rawName: string, existing: CompanyCandidate[]): MatchResult {
+export function matchCompany(
+  rawName: string,
+  existing: CompanyCandidate[],
+  program: Program | null = null
+): MatchResult {
   const normalized = normalizeCompanyName(rawName);
 
-  const exact = existing.find((c) => c.normalizedName === normalized);
-  if (exact) return { companyId: exact.id, confidence: "HIGH" };
+  const exactName = existing.filter((c) => c.normalizedName === normalized);
+  if (exactName.length > 0) return selectByProgram(exactName, program);
 
-  let best: { candidate: CompanyCandidate; dist: number } | null = null;
+  let bestName: string | null = null;
+  let bestDist = Infinity;
   for (const candidate of existing) {
     const dist = distance(normalized, candidate.normalizedName);
-    if (!best || dist < best.dist) best = { candidate, dist };
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestName = candidate.normalizedName;
+    }
   }
 
-  if (best) {
-    const threshold = Math.floor(Math.min(normalized.length, best.candidate.normalizedName.length) * 0.2);
-    if (best.dist <= threshold && best.dist > 0) {
-      return { companyId: best.candidate.id, confidence: "LOW" };
+  if (bestName !== null) {
+    const threshold = Math.floor(Math.min(normalized.length, bestName.length) * 0.2);
+    if (bestDist <= threshold && bestDist > 0) {
+      // A fuzzy name match is already uncertain, so never report HIGH here
+      // even when the programme lines up exactly.
+      const fuzzy = selectByProgram(
+        existing.filter((c) => c.normalizedName === bestName),
+        program
+      );
+      return fuzzy.companyId ? { companyId: fuzzy.companyId, confidence: "LOW" } : fuzzy;
     }
   }
 

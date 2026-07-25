@@ -50,4 +50,31 @@ describe("extractWithLlm", () => {
     const fallback = new FakeListChatModel({ responses: ["also not json"] });
     await expect(extractWithLlm(sampleMail, { primary, fallback })).rejects.toThrow();
   });
+
+  it("reports BOTH providers' errors when everything fails", async () => {
+    // withFallbacks re-raised only the primary's error, so a broken fallback
+    // looked identical to a working one and the real cause stayed invisible.
+    // The ingestion log must carry enough to tell those apart.
+    const primary = new FakeListChatModel({ responses: [] });
+    const fallback = new FakeListChatModel({ responses: [] });
+
+    let message = "";
+    try {
+      await extractWithLlm(sampleMail, { primary, fallback });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(message).toContain("primary:");
+    expect(message).toContain("fallback:");
+    expect(message).toContain("All extraction providers failed");
+  });
+
+  it("does not consult the fallback when the primary succeeds", async () => {
+    // A working primary must not spend the fallback's quota too.
+    const primary = new FakeListChatModel({ responses: [validJsonResponse] });
+    const fallback = new FakeListChatModel({ responses: [] });
+    const result = await extractWithLlm(sampleMail, { primary, fallback });
+    expect(result.companyName).toBe("Wakefit");
+  });
 });

@@ -12,6 +12,10 @@ const envSchema = z.object({
   GMAIL_PUBSUB_TOPIC: z.string().min(1),
   GMAIL_PUBSUB_VERIFICATION_TOKEN: z.string().min(1),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
+  // Rolling alias rather than a pinned version: Google withdrew free-tier
+  // access to gemini-2.0-* (now reporting a free-tier limit of 0), so a pinned
+  // name silently becomes dead weight. Overridable without a redeploy.
+  GEMINI_MODEL: z.string().min(1).default("gemini-flash-latest"),
   GROQ_API_KEY: z.string().min(1),
   TAVILY_API_KEY: z.string().min(1),
   BLOB_READ_WRITE_TOKEN: z.string().min(1),

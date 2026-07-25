@@ -14,8 +14,17 @@ export function buildLlmClients(env: Env): LlmClients {
   return {
     primary: new ChatGoogleGenerativeAI({
       apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-      model: "gemini-2.0-flash",
+      // Pinned model names age out: Google withdrew free-tier access to the
+      // gemini-2.0-* models (they now report a free-tier limit of 0), and
+      // gemini-2.5-flash isn't exposed on this key at all. The rolling
+      // "-latest" alias tracks whatever the current free-tier flash model is.
+      // Overridable so a future break is an env change, not a redeploy.
+      model: env.GEMINI_MODEL,
       temperature: 0,
+      // The fallback provider exists precisely for a dead primary. Retrying a
+      // quota rejection six times (the default) just burns the serverless
+      // budget before Groq ever gets a turn.
+      maxRetries: 1,
     }),
     fallback: new ChatGroq({
       apiKey: env.GROQ_API_KEY,
@@ -42,18 +51,32 @@ the wrong drive.
 Respond with ONLY the JSON object matching the schema, no prose.`;
 
 export async function extractWithLlm(mail: ParsedMail, clients: LlmClients): Promise<ExtractionResult> {
-  const structuredPrimary = clients.primary.withStructuredOutput<ExtractionResult>(ExtractionSchema, {
-    name: "extraction",
-  });
-  const structuredFallback = clients.fallback.withStructuredOutput<ExtractionResult>(ExtractionSchema, {
-    name: "extraction",
-  });
-  const chain = structuredPrimary.withFallbacks({ fallbacks: [structuredFallback] });
-
   const userMessage = `Subject: ${mail.subject}\nFrom: ${mail.from}\nReceived: ${mail.receivedAt.toISOString()}\n\nBody:\n${mail.bodyText}`;
-
-  return chain.invoke([
+  const messages = [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: userMessage },
-  ]);
+  ];
+
+  // Tried in order by hand rather than via withFallbacks, which re-raises only
+  // the FIRST error and discards the rest. That hid the real cause twice: a
+  // failure reported nothing but the primary's message, so a broken fallback
+  // was indistinguishable from a working one. Reporting every provider's
+  // error makes a total outage diagnosable from the ingestion log alone.
+  const failures: string[] = [];
+  const providers: [string, BaseChatModel][] = [
+    ["primary", clients.primary],
+    ["fallback", clients.fallback],
+  ];
+
+  for (const [label, client] of providers) {
+    try {
+      return await client
+        .withStructuredOutput<ExtractionResult>(ExtractionSchema, { name: "extraction" })
+        .invoke(messages);
+    } catch (error) {
+      failures.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  throw new Error(`All extraction providers failed — ${failures.join(" || ")}`);
 }

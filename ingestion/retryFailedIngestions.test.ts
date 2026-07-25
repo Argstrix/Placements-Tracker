@@ -67,12 +67,15 @@ describe("retryFailedIngestions", () => {
     expect(sendAlert.mock.calls[0][0]).toContain("retry-2");
   });
 
-  it("does not re-retry a message whose latest log entry already succeeded", async () => {
+  it("does not re-retry a message that failed once and later succeeded", async () => {
+    // One row per mail, updated in place — the earlier failure leaves no stale
+    // row behind that could trigger a pointless retry or a false alert.
     await db.ingestionLog.create({
-      data: { gmailMessageId: "retry-3", status: "FAILED", errorDetail: "boom", retryCount: 1, createdAt: new Date("2026-01-01T00:00:00Z") },
+      data: { gmailMessageId: "retry-3", status: "FAILED", errorDetail: "boom", retryCount: 1 },
     });
-    await db.ingestionLog.create({
-      data: { gmailMessageId: "retry-3", status: "SUCCESS", createdAt: new Date("2026-01-01T00:01:00Z") },
+    await db.ingestionLog.update({
+      where: { gmailMessageId: "retry-3" },
+      data: { status: "SUCCESS", errorDetail: null },
     });
     const sendAlert = vi.fn();
     let fetchCount = 0;

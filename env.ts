@@ -19,6 +19,13 @@ const envSchema = z.object({
   // Secret pepper for hashing Neo IDs. Neo IDs are never stored in plaintext —
   // only salted with this value and hashed — so this must be set and kept secret.
   NEO_ID_HASH_SECRET: z.string().min(1),
+
+  // Storage-reclamation tunables. Unlike everything above these are optional:
+  // the defaults are the intended operating values, and an unset variable must
+  // not be a startup failure.
+  RETIRE_AFTER_RESULT_DAYS: z.coerce.number().int().positive().default(30),
+  RETIRE_AFTER_IDLE_DAYS: z.coerce.number().int().positive().default(120),
+  RECLAIM_BATCH_SIZE: z.coerce.number().int().positive().default(200),
 });
 
 export type Env = z.infer<typeof envSchema>;

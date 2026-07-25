@@ -8,9 +8,12 @@ export default defineConfig({
     },
   },
   test: {
-    // PGlite (WASM Postgres) cold-starts plus a `prisma migrate diff`
-    // shell-out per test file; under full-suite parallel execution that can
-    // exceed Vitest's 5s default, even though each step is fast in isolation.
+    // Generate the schema SQL once up front rather than letting every worker
+    // shell out to `prisma migrate diff` at the same time on a cold cache.
+    globalSetup: [path.resolve(__dirname, "db/warmTestSchemaCache.ts")],
+    // PGlite (WASM Postgres) cold-starts per test file; under full-suite
+    // parallel execution that can exceed Vitest's 5s default, even though
+    // each step is fast in isolation.
     testTimeout: 20000,
     hookTimeout: 20000,
   },

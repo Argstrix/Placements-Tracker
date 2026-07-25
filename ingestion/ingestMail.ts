@@ -109,6 +109,13 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
           await tx.company.update({
             where: { id: match.companyId },
             data: {
+              // Mail for a retired company means the drive wasn't over after
+              // all — a delayed offer letter, joining instructions. Put it
+              // back in the live pool; it can retire again once it goes quiet
+              // for a full threshold. Attachments already purged stay purged,
+              // but this mail's own attachments are stored normally.
+              retiredAt: null,
+              purgedAt: null,
               category: extraction.category ?? existingCompany.category,
               campuses: extraction.campuses.length > 0 ? extraction.campuses : existingCompany.campuses,
               ctc: extraction.ctc ?? existingCompany.ctc,
@@ -174,8 +181,11 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
         });
       }
 
-      await tx.ingestionLog.create({
-        data: { gmailMessageId, status: "SUCCESS" },
+      // One row per mail, ever — see the note on IngestionLog in the schema.
+      await tx.ingestionLog.upsert({
+        where: { gmailMessageId },
+        create: { gmailMessageId, status: "SUCCESS" },
+        update: { status: "SUCCESS", errorDetail: null },
       });
 
       return { mailEventId: mailEvent.id, newCompany: createdCompany };
@@ -187,12 +197,11 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
 
     return { status: "SUCCESS", mailEventId, newCompanyId: newCompany?.id };
   } catch (error) {
-    await db.ingestionLog.create({
-      data: {
-        gmailMessageId,
-        status: "FAILED",
-        errorDetail: error instanceof Error ? error.message : String(error),
-      },
+    const errorDetail = error instanceof Error ? error.message : String(error);
+    await db.ingestionLog.upsert({
+      where: { gmailMessageId },
+      create: { gmailMessageId, status: "FAILED", errorDetail },
+      update: { status: "FAILED", errorDetail },
     });
     return { status: "FAILED", error: error instanceof Error ? error.message : String(error) };
   }

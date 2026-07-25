@@ -18,6 +18,34 @@ async function requireAdmin(): Promise<void> {
   if (role !== "admin") throw new Error("Not authorized: admin role required");
 }
 
+/**
+ * Retires a company by hand, ahead of the automatic thresholds. Marks only —
+ * the blob purge happens on the next nightly sweep, so there is exactly one
+ * code path that deletes files and this action stays fast.
+ */
+export async function retireCompany(companyId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.company.update({
+    where: { id: companyId },
+    data: { retiredAt: new Date() },
+  });
+  revalidatePath("/admin/retention");
+}
+
+/**
+ * Returns a company to the live pool. Clears both markers so the sweep will
+ * re-evaluate it from scratch — but any file already deleted is gone for good,
+ * which the dashboard warns about before this runs.
+ */
+export async function unretireCompany(companyId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.company.update({
+    where: { id: companyId },
+    data: { retiredAt: null, purgedAt: null },
+  });
+  revalidatePath("/admin/retention");
+}
+
 export async function retryOne(gmailMessageId: string): Promise<void> {
   await requireAdmin();
   const env = getEnv();

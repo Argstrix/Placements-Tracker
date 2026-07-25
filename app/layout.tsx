@@ -5,6 +5,7 @@ import { isAuthorized } from "@/auth/isAuthorized";
 import { prisma } from "@/db/client";
 import AppShell from "./components/AppShell";
 import SiteFooter from "./components/SiteFooter";
+import { THEME_BOOT_SCRIPT } from "./components/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +24,14 @@ export default async function RootLayout({
   const role = email ? (await isAuthorized(email, prisma)).role : null;
 
   return (
-    <html lang="en" className="antialiased">
+    // suppressHydrationWarning: the boot script below sets data-theme on this
+    // element before React hydrates, so the server and client markup differ here
+    // by design.
+    <html lang="en" className="antialiased" suppressHydrationWarning>
+      <head>
+        {/* Runs before first paint so a saved dark theme never flashes light. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body>
         <AppShell email={email} isAdmin={role === "admin"} isSignedIn={Boolean(session)}>
           <main className="content">{children}</main>

@@ -43,11 +43,21 @@ model Company {
   enrichmentSources     String[] @default([])
   enrichmentAttemptedAt DateTime?
 
+  // A company is "retired" once its drive is over and the final shortlist has
+  // been announced. Retirement makes its attachments eligible for deletion
+  // from blob storage — nothing else about it is ever dropped. `purgedAt` is
+  // set only after every attachment beneath it has been processed, so it
+  // doubles as a "nothing left to reclaim here" marker.
+  retiredAt DateTime?
+  purgedAt  DateTime?
+
   mailEvents     MailEvent[]
   interests      Interest[]
   reportedIssues ReportedIssue[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([retiredAt])
 }
 
 model MailEvent {
@@ -70,26 +80,37 @@ model MailEvent {
 model Attachment {
   id          String    @id @default(cuid())
   mailEventId String
-  mailEvent   MailEvent @relation(fields: [mailEventId], references: [id])
+  mailEvent   MailEvent @relation(fields: [mailEventId], references: [id], onDelete: Cascade)
   filename    String
   mimeType    String
-  blobUrl     String
+  // Null once the blob has been reclaimed for a retired company. The row is
+  // kept as a tombstone so the timeline can still show that a file existed
+  // rather than letting it vanish silently — see retention/purgeRetiredBlobs.ts.
+  blobUrl     String?
+  purgedAt    DateTime?
   createdAt   DateTime  @default(now())
+
+  @@index([mailEventId])
 }
 
 // Stores only a one-way hash of each shortlisted Neo ID — never the ID itself.
 // See ingestion/hashNeoId.ts. A leaked database cannot reveal any Neo ID or
 // reconstruct a company's shortlist; matching is done by hashing the user's
 // entered ID and comparing hashes (exact match only).
+// This is by far the largest table, so every column is sized deliberately: a
+// bigint identity key rather than a 25-char cuid, and the digest stored as 16
+// raw bytes rather than 64 hex characters. Together with dropping a redundant
+// createdAt (mailEvent.receivedAt already carries the time) that roughly halves
+// the per-row cost including indexes. No shortlist data is ever deleted.
 model ShortlistHash {
-  id          String    @id @default(cuid())
-  idHash      String
+  id          BigInt    @id @default(autoincrement())
+  idHash      Bytes
   round       String?
   mailEventId String
-  mailEvent   MailEvent @relation(fields: [mailEventId], references: [id])
-  createdAt   DateTime  @default(now())
+  mailEvent   MailEvent @relation(fields: [mailEventId], references: [id], onDelete: Cascade)
 
   @@index([idHash])
+  @@index([mailEventId])
 }
 
 model User {
@@ -120,13 +141,21 @@ model ReportedIssue {
   createdAt     DateTime @default(now())
 }
 
+// One row per mail, ever — written by upsert rather than insert. Before the
+// unique constraint existed this table grew a row per ingestion attempt and
+// every consumer had to de-duplicate it client-side, loading the whole table
+// to do so. Uniqueness bounds it permanently and makes the "has this mail
+// already succeeded?" and "what is still failing?" queries indexed lookups.
 model IngestionLog {
   id             String          @id @default(cuid())
-  gmailMessageId String
+  gmailMessageId String          @unique
   status         IngestionStatus
   errorDetail    String?
   retryCount     Int             @default(0)
   createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([status])
 }
 
 model AdminUser {

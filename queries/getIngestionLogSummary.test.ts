@@ -7,17 +7,33 @@ describe("getIngestionLogSummary", () => {
   let db: PrismaClient;
   beforeEach(async () => {
     db = await createTestPrismaClient();
-    await db.ingestionLog.create({
-      data: { gmailMessageId: "1", status: "FAILED", errorDetail: "e1", createdAt: new Date("2026-01-01T00:00:00Z") },
-    });
-    await db.ingestionLog.create({
-      data: { gmailMessageId: "1", status: "SUCCESS", createdAt: new Date("2026-01-01T00:01:00Z") },
-    });
   });
 
-  it("shows only the latest status per gmailMessageId", async () => {
+  it("shows the current status of a mail that failed and later succeeded", async () => {
+    // The log holds one row per mail, updated in place, so a later success
+    // replaces the earlier failure rather than sitting alongside it.
+    await db.ingestionLog.upsert({
+      where: { gmailMessageId: "1" },
+      create: { gmailMessageId: "1", status: "FAILED", errorDetail: "e1" },
+      update: {},
+    });
+    await db.ingestionLog.upsert({
+      where: { gmailMessageId: "1" },
+      create: { gmailMessageId: "1", status: "SUCCESS" },
+      update: { status: "SUCCESS", errorDetail: null },
+    });
+
     const result = await getIngestionLogSummary(db);
     expect(result).toHaveLength(1);
     expect(result[0].status).toBe("SUCCESS");
+    expect(result[0].errorDetail).toBeNull();
+  });
+
+  it("orders most recently touched first", async () => {
+    await db.ingestionLog.create({ data: { gmailMessageId: "old", status: "SUCCESS" } });
+    await db.ingestionLog.create({ data: { gmailMessageId: "new", status: "FAILED", errorDetail: "boom" } });
+
+    const result = await getIngestionLogSummary(db);
+    expect(result.map((r) => r.gmailMessageId)).toEqual(["new", "old"]);
   });
 });

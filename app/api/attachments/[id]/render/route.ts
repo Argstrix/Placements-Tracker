@@ -19,6 +19,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const attachment = await prisma.attachment.findUnique({ where: { id } });
   if (!attachment) return NextResponse.json({ error: "not found" }, { status: 404 });
 
+  // Tombstoned by the retention sweep — the row survives, the file doesn't.
+  if (!attachment.blobUrl) {
+    return NextResponse.json({ error: "attachment removed to save storage" }, { status: 410 });
+  }
+
   const upstream = await fetch(attachment.blobUrl);
   const buffer = Buffer.from(await upstream.arrayBuffer());
 

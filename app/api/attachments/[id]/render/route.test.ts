@@ -16,6 +16,17 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 describe("GET /api/attachments/[id]/render", () => {
+  it("returns 410 for an attachment reclaimed after its company retired", async () => {
+    mockGetServerSession.mockResolvedValue({ user: { email: "s@vitstudent.ac.in" } });
+    mockIsAuthorized.mockResolvedValue({ allowed: true, role: "student" });
+    mockFindUnique.mockResolvedValue({ id: "abc", mimeType: DOCX_MIME, blobUrl: null, filename: "JD.docx" });
+    const { GET } = await import("./route");
+    const res = await GET(new Request("http://localhost/api/attachments/abc/render"), {
+      params: Promise.resolve({ id: "abc" }),
+    });
+    expect(res.status).toBe(410);
+  });
+
   it("returns converted HTML for a docx attachment", async () => {
     mockGetServerSession.mockResolvedValue({ user: { email: "s@vitstudent.ac.in" } });
     mockIsAuthorized.mockResolvedValue({ allowed: true, role: "student" });

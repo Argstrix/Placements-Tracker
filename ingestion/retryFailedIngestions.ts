@@ -16,15 +16,14 @@ export interface RetryOptions {
 export async function retryFailedIngestions(options: RetryOptions): Promise<{ retried: number; stillFailed: number }> {
   const { db, maxRetries, sendAlert } = options;
 
-  // A gmailMessageId can have failed once and later succeeded on manual
-  // retry — that old FAILED row must not trigger another retry/alert.
-  // Distinct on the *latest* log per message first, then filter to the
-  // ones whose current state is actually FAILED.
-  const latestPerMessage = await db.ingestionLog.findMany({
-    distinct: ["gmailMessageId"],
-    orderBy: { createdAt: "desc" },
+  // IngestionLog holds exactly one row per mail, upserted in place, so a
+  // message that failed once and later succeeded no longer leaves a stale
+  // FAILED row behind — the current state is simply the row's status. This
+  // used to require loading the entire table and de-duplicating client-side.
+  const failed = await db.ingestionLog.findMany({
+    where: { status: "FAILED" },
+    orderBy: { createdAt: "asc" },
   });
-  const failed = latestPerMessage.filter((entry) => entry.status === "FAILED");
 
   let retried = 0;
   let stillFailed = 0;
@@ -50,8 +49,8 @@ export async function retryFailedIngestions(options: RetryOptions): Promise<{ re
     if (result.status === "SUCCESS") {
       retried += 1;
     } else {
-      await db.ingestionLog.updateMany({
-        where: { gmailMessageId: entry.gmailMessageId, status: "FAILED" },
+      await db.ingestionLog.update({
+        where: { gmailMessageId: entry.gmailMessageId },
         data: { retryCount: { increment: 1 } },
       });
       stillFailed += 1;

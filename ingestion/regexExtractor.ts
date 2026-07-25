@@ -5,12 +5,38 @@ export interface FastPathResult {
   matched: boolean;
   companyName?: string;
   program?: Program | null;
+  /** ISO yyyy-mm-dd, or undefined when the mail states no visit date. */
+  visitDate?: string;
   category?: string;
   ctc?: string;
   stipend?: string;
   eligibilityCriteria?: string;
   eligibleBranches?: string[];
   website?: string;
+}
+
+/**
+ * "Date of Visit: *27-07-2026 - online mode*" and friends.
+ *
+ * Written as its own matcher because the value sits on the same line as the
+ * label, unlike the block fields extractLabeledField handles, and because the
+ * fast path previously dropped this field entirely — leaving companies with a
+ * null visitDate, which the /companies date filter silently excludes.
+ *
+ * Day-first: CDC mails use Indian DD-MM-YYYY throughout. Reading 07-08-2026 as
+ * 7 August rather than 8 July matters — a misread here shows students the
+ * wrong drive date.
+ */
+function extractVisitDate(body: string): string | undefined {
+  const match = body.match(/Date\s+of\s+Visit\s*:?\s*\**\s*(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/i);
+  if (!match) return undefined;
+
+  const [, day, month, year] = match;
+  const d = Number(day);
+  const m = Number(month);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return undefined;
+
+  return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
 function extractLabeledField(body: string, label: string): string | undefined {
@@ -54,6 +80,7 @@ export function tryRegexExtract(mail: ParsedMail): FastPathResult {
     matched,
     companyName,
     program,
+    visitDate: extractVisitDate(body),
     category,
     ctc,
     stipend,

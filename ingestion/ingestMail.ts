@@ -41,7 +41,7 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
           program: fastPath.program ?? null,
           category: fastPath.category ?? null,
           campuses: [] as string[],
-          visitDate: null as string | null,
+          visitDate: (fastPath.visitDate ?? null) as string | null,
           eligibleBranches: fastPath.eligibleBranches ?? [],
           eligibilityCriteria: fastPath.eligibilityCriteria ?? null,
           ctc: fastPath.ctc ?? null,
@@ -96,6 +96,7 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
           await tx.company.findMany({
             select: {
               id: true,
+              name: true,
               normalizedName: true,
               program: true,
               mailEvents: { select: { receivedAt: true }, orderBy: { receivedAt: "desc" }, take: 1 },
@@ -103,6 +104,7 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
           })
         ).map((c) => ({
           id: c.id,
+          name: c.name,
           normalizedName: c.normalizedName,
           program: c.program,
           lastMailAt: c.mailEvents[0]?.receivedAt ?? null,

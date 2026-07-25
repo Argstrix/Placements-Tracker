@@ -8,7 +8,12 @@ export async function getCompaniesInRange(
 ): Promise<Company[]> {
   return db.company.findMany({
     where: {
-      visitDate: { gte: from, lte: to },
+      // Undated drives are included deliberately. A NULL visitDate fails any
+      // range comparison in SQL, so filtering on the range alone made a
+      // company that hadn't announced its date invisible on /companies while
+      // still existing everywhere else — the drive was live and unfindable.
+      // They surface under "Date not announced" instead.
+      OR: [{ visitDate: { gte: from, lte: to } }, { visitDate: null }],
       // Filtering to BTECH or MTECH always includes BOTH drives — those are
       // open to this student too, so excluding them would hide drives they
       // are eligible for.

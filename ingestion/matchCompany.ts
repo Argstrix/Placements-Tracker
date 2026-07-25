@@ -3,6 +3,8 @@ import type { Program } from "./classifyProgram";
 
 export interface CompanyCandidate {
   id: string;
+  /** Raw name as the mail wrote it, e.g. "Eternal (Zomato)" — aliases derive from it. */
+  name: string;
   normalizedName: string;
   program: Program;
   /** Most recent mail on this drive, used only to break program ambiguity. */
@@ -23,6 +25,33 @@ export function normalizeCompanyName(name: string): string {
     .replace(/[.,]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Every name a company might be written under.
+ *
+ * CDC mails name rebranded companies as "NewName (FormerName)" — the drive
+ * announcement said "Eternal (Zomato)" while every follow-up said just
+ * "Zomato". Treated as separate companies, the follow-ups formed a second,
+ * empty drive and the real one stopped receiving its own timeline.
+ *
+ * So "Eternal (Zomato)" yields "eternal (zomato)", "eternal" and "zomato",
+ * and a later mail under any of those reaches the same drive.
+ */
+export function companyAliases(rawName: string): string[] {
+  const aliases = new Set<string>([normalizeCompanyName(rawName)]);
+
+  for (const parenthesised of rawName.match(/\(([^)]+)\)/g) ?? []) {
+    aliases.add(normalizeCompanyName(parenthesised.slice(1, -1)));
+  }
+  aliases.add(normalizeCompanyName(rawName.replace(/\([^)]*\)/g, "")));
+
+  // Single characters and empties are too weak to identify a company.
+  return [...aliases].filter((a) => a.length > 1);
+}
+
+function sharesAlias(a: string[], b: string[]): boolean {
+  return a.some((x) => b.includes(x));
 }
 
 function mostRecent(candidates: CompanyCandidate[]): CompanyCandidate {
@@ -74,6 +103,17 @@ export function matchCompany(
 
   const exactName = existing.filter((c) => c.normalizedName === normalized);
   if (exactName.length > 0) return selectByProgram(exactName, program);
+
+  // Before falling back to fuzzy distance, try the rebrand aliases. An exact
+  // alias hit is a strong signal, but reported LOW rather than HIGH so a
+  // "Zomato" mail landing on the "Eternal (Zomato)" drive is visible for
+  // review instead of silently merged.
+  const incomingAliases = companyAliases(rawName);
+  const aliasMatches = existing.filter((c) => sharesAlias(incomingAliases, companyAliases(c.name)));
+  if (aliasMatches.length > 0) {
+    const selected = selectByProgram(aliasMatches, program);
+    return selected.companyId ? { companyId: selected.companyId, confidence: "LOW" } : selected;
+  }
 
   let bestName: string | null = null;
   let bestDist = Infinity;

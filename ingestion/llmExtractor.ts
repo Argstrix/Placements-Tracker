@@ -48,6 +48,13 @@ programme name, the eligible branches, or the eligibility criteria. Treat Integr
 name the company), return null rather than guessing; a wrong programme files the mail against
 the wrong drive.
 
+Ignore "UG" and "PG" where they appear in the boilerplate list of documents to carry (e.g.
+"Photo Copy of Mark Sheets - PG, UG, Higher Secondary"). That is a checklist of certificates,
+not a statement about who the drive is for, and must not set program.
+
+Company names are sometimes given as "NewName (FormerName)", e.g. "Eternal (Zomato)". Return
+companyName exactly as the mail writes it, including the parenthesised name — do not pick one.
+
 Respond with ONLY the JSON object matching the schema, no prose.`;
 
 export async function extractWithLlm(mail: ParsedMail, clients: LlmClients): Promise<ExtractionResult> {

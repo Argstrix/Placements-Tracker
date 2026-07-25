@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchCompany, normalizeCompanyName, type CompanyCandidate } from "./matchCompany";
+import { companyAliases, matchCompany, normalizeCompanyName, type CompanyCandidate } from "./matchCompany";
 
 describe("normalizeCompanyName", () => {
   it("lowercases and strips common suffixes/whitespace", () => {
@@ -9,7 +9,7 @@ describe("normalizeCompanyName", () => {
 });
 
 function candidate(over: Partial<CompanyCandidate> & { id: string; normalizedName: string }): CompanyCandidate {
-  return { program: "BOTH", lastMailAt: null, ...over };
+  return { program: "BOTH", lastMailAt: null, name: over.normalizedName, ...over };
 }
 
 describe("matchCompany", () => {
@@ -34,6 +34,49 @@ describe("matchCompany", () => {
 
   it("returns no match for a genuinely new company", () => {
     expect(matchCompany("Wakefit", existing)).toEqual({ companyId: null, confidence: null });
+  });
+});
+
+describe("companyAliases", () => {
+  it("yields the full name, the parenthesised name, and the name without it", () => {
+    expect(companyAliases("Eternal (Zomato)").sort()).toEqual(["eternal", "eternal (zomato)", "zomato"]);
+  });
+
+  it("still normalizes suffixes inside aliases", () => {
+    expect(companyAliases("Eternal Pvt Ltd (Zomato)")).toContain("zomato");
+  });
+
+  it("is a single alias when there is no parenthetical", () => {
+    expect(companyAliases("Wakefit")).toEqual(["wakefit"]);
+  });
+
+  it("drops one-character fragments as too weak to identify a company", () => {
+    expect(companyAliases("Infosys (A)")).not.toContain("a");
+  });
+});
+
+describe("matchCompany — rebranded names", () => {
+  // The real case: the drive mail said "Eternal (Zomato)" and every follow-up
+  // said just "Zomato", which created a second, empty drive.
+  const eternal = candidate({ id: "e", normalizedName: "eternal (zomato)", name: "Eternal (Zomato)" });
+
+  it("links a follow-up naming only the former brand", () => {
+    const result = matchCompany("Zomato", [eternal]);
+    expect(result.companyId).toBe("e");
+    // LOW so the merge is visible for review rather than silent.
+    expect(result.confidence).toBe("LOW");
+  });
+
+  it("links a follow-up naming only the new brand", () => {
+    expect(matchCompany("Eternal", [eternal]).companyId).toBe("e");
+  });
+
+  it("still prefers an exact full-name match at HIGH confidence", () => {
+    expect(matchCompany("Eternal (Zomato)", [eternal])).toEqual({ companyId: "e", confidence: "HIGH" });
+  });
+
+  it("does not link an unrelated company", () => {
+    expect(matchCompany("Wakefit", [eternal])).toEqual({ companyId: null, confidence: null });
   });
 });
 

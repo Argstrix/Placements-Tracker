@@ -8,13 +8,19 @@ function initials(name: string): string {
 
 export default function CompanyCalendar({ companies }: { companies: Company[] }) {
   const byDate = new Map<string, Company[]>();
+  // Drives whose date the mail never stated. Previously skipped outright,
+  // which made them unreachable from this page entirely.
+  const undated: Company[] = [];
   for (const c of companies) {
-    if (!c.visitDate) continue;
+    if (!c.visitDate) {
+      undated.push(c);
+      continue;
+    }
     const key = c.visitDate.toISOString().slice(0, 10);
     byDate.set(key, [...(byDate.get(key) ?? []), c]);
   }
 
-  if (byDate.size === 0) {
+  if (byDate.size === 0 && undated.length === 0) {
     return (
       <div className="empty">
         No company visits in this range. Try a different month, or widen the date range.
@@ -59,6 +65,35 @@ export default function CompanyCalendar({ companies }: { companies: Company[] })
           </div>
         );
       })}
+
+      {undated.length > 0 && (
+        <div className="panel">
+          <div className="panelhead">
+            <h3>Date not announced</h3>
+            <span className="mono">
+              {undated.length} drive{undated.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="colist">
+            {undated.map((c) => (
+              <Link key={c.id} href={`/companies/${c.id}`} className="corow">
+                <span className="cc">{initials(c.name)}</span>
+                <span className="cn">
+                  <b>
+                    {c.name} <ProgramBadge program={c.program} />
+                  </b>
+                  {(c.category || c.ctc) && <small>{[c.category, c.ctc].filter(Boolean).join(" · ")}</small>}
+                </span>
+                <span className="cmeta">
+                  <span className="last" aria-hidden="true">
+                    →
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

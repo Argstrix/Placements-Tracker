@@ -38,6 +38,20 @@ describe("classifyProgram", () => {
     expect(classifyProgram("MECHANISM of selection")).toBeNull();
   });
 
+  it("ignores UG/PG in the document checklist every CDC mail ends with", () => {
+    // Real regression: this line classified a Zomato PPT mail as BOTH, which
+    // put a "B.Tech + M.Tech" badge on a drive whose programme was unstated.
+    const boilerplate =
+      "Carry your updated Resumes, photos, College photo ID and all other relevant certificates... " +
+      "(Photo Copy of Mark Sheets - PG, UG, Higher Secondary 10th)";
+    expect(classifyProgram(boilerplate)).toBeNull();
+  });
+
+  it("still reads UG/PG when they qualify a group of students", () => {
+    expect(classifyProgram("Open to UG students only")).toBe("BTECH");
+    expect(classifyProgram("PG candidates may apply")).toBe("MTECH");
+  });
+
   it("is case insensitive", () => {
     expect(classifyProgram("b.tech")).toBe("BTECH");
     expect(classifyProgram("M.TECH")).toBe("MTECH");

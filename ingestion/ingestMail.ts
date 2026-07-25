@@ -184,21 +184,29 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
         },
       });
 
-      for (const att of uploadedAttachments) {
-        await tx.attachment.create({
-          data: {
+      // Bulk-inserted rather than one create() per row. A shortlist mail can
+      // carry several hundred Neo IDs, and a round-trip each over a serverless
+      // connection overran the 5s interactive-transaction budget before the
+      // transaction could commit. One statement per table instead of N.
+      if (uploadedAttachments.length > 0) {
+        await tx.attachment.createMany({
+          data: uploadedAttachments.map((att) => ({
             mailEventId: mailEvent.id,
             filename: att.filename,
             mimeType: att.mimeType,
             blobUrl: att.blobUrl,
-          },
+          })),
         });
       }
 
       // Store only irreversible hashes — never the Neo IDs themselves.
-      for (const entry of shortlistEntries) {
-        await tx.shortlistHash.create({
-          data: { idHash: hashNeoId(entry.neoId), round: entry.round, mailEventId: mailEvent.id },
+      if (shortlistEntries.length > 0) {
+        await tx.shortlistHash.createMany({
+          data: shortlistEntries.map((entry) => ({
+            idHash: hashNeoId(entry.neoId),
+            round: entry.round,
+            mailEventId: mailEvent.id,
+          })),
         });
       }
 
@@ -210,6 +218,15 @@ export async function ingestMail(raw: Buffer, gmailMessageId: string, options: I
       });
 
       return { mailEventId: mailEvent.id, newCompany: createdCompany };
+    },
+    {
+      // Prisma's 5s interactive default is tuned for small unit-of-work
+      // transactions. A shortlist mail writes one mail event plus a few
+      // hundred hashes over a serverless connection, so the ceiling is raised
+      // to leave headroom above the bulk inserts while staying well inside the
+      // function's own time limit.
+      timeout: 20_000,
+      maxWait: 10_000,
     });
 
     if (newCompany && options.onNewCompany) {

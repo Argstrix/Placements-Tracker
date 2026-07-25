@@ -7,6 +7,10 @@ import { uploadToBlob } from "@/ingestion/uploadAttachment";
 import { enrichAndSaveCompany } from "@/enrichment/enrichAndSaveCompany";
 import { prisma } from "@/db/client";
 
+// A single push can sync several new mails, each costing an LLM call and a
+// bulk shortlist write, so this needs more than the platform default.
+export const maxDuration = 60;
+
 // Pub/Sub push subscriptions are configured with this token as a query
 // param on the endpoint URL — a shared secret only Google's push service
 // and this route know, guarding against arbitrary internet POSTs. The push

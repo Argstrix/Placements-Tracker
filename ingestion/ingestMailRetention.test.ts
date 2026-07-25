@@ -126,6 +126,28 @@ describe("ingestMail — retention interactions", () => {
     expect(logs[0].errorDetail).toBeNull();
   });
 
+  it("writes a large shortlist in bulk rather than a round-trip per student", async () => {
+    // The regression: 500 sequential shortlistHash.create() calls overran the
+    // 5s interactive-transaction budget and the whole ingest rolled back.
+    const neoIds = Array.from({ length: 500 }, (_, i) => `23BCE${String(1000 + i)}`);
+    const body = `Shortlisted candidates:\n${neoIds.join("\n")}\n`;
+
+    const result = await ingestMail(eml("Wakefit shortlist", body), "bulk-1", {
+      db,
+      llmClients: clients(extraction("Wakefit", "SHORTLIST_ROUND")),
+      uploadAttachment: async () => "https://blob.example/x",
+    });
+
+    expect(result.status).toBe("SUCCESS");
+    expect(await db.shortlistHash.count()).toBe(neoIds.length);
+
+    // Every stored value must be a 16-byte digest, never a raw Neo ID.
+    const sample = await db.shortlistHash.findFirst();
+    expect(sample?.idHash).toHaveLength(16);
+    const stored = await db.mailEvent.findFirstOrThrow({ where: { gmailMessageId: "bulk-1" } });
+    expect(stored.bodyText).not.toContain(neoIds[0]);
+  });
+
   it("does not resurrect a company that was never retired", async () => {
     const company = await db.company.create({
       data: { name: "Infosys", normalizedName: "infosys" },

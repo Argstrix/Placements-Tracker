@@ -9,6 +9,11 @@ import { isAuthorized } from "@/auth/isAuthorized";
 import { getServerSession } from "next-auth";
 import { buildAuthOptions } from "@/auth/authOptions";
 
+// Extraction plus a bulk shortlist write can outrun the platform's short
+// default; a mail that times out mid-pipeline is logged FAILED and retried,
+// which wastes an LLM call each time.
+export const maxDuration = 60;
+
 // Admin-only: lets the admin paste in a raw .eml (e.g. one they saved from
 // Gmail directly) and run it through the exact same pipeline the webhook
 // uses, without needing a live Pub/Sub push. Useful for verifying

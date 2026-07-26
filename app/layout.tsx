@@ -9,7 +9,7 @@ import { THEME_BOOT_SCRIPT } from "./components/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Placement Board — VIT placement tracker",
+  title: "Placement Tracker — VIT placement tracker",
   description: "Unofficial VIT placement mail tracker",
   robots: { index: false, follow: false },
 };

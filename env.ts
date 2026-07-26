@@ -23,6 +23,11 @@ const envSchema = z.object({
   // Secret pepper for hashing Neo IDs. Neo IDs are never stored in plaintext —
   // only salted with this value and hashed — so this must be set and kept secret.
   NEO_ID_HASH_SECRET: z.string().min(1),
+  // Reversible encryption key for the opt-in Neo ID save (auth/neoIdVault.ts).
+  // Deliberately separate from NEO_ID_HASH_SECRET: that one is a one-way
+  // pepper for shortlist matching, this one is a reversible key for a
+  // user's own saved Neo ID — a leak of one must not compromise the other.
+  NEO_ID_ENC_SECRET: z.string().min(1),
 
   // Storage-reclamation tunables. Unlike everything above these are optional:
   // the defaults are the intended operating values, and an unset variable must

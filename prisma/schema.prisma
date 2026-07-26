@@ -134,6 +134,14 @@ model User {
   email     String     @unique
   interests Interest[]
   createdAt DateTime   @default(now())
+
+  // Opt-in, encrypted save of the user's own Neo ID, for autofill on
+  // /search. Unrelated to ShortlistHash (everyone's Neo IDs, one-way
+  // hashed, never linked to identity) — see auth/neoIdVault.ts.
+  neoIdEncrypted         Bytes?
+  // Set the first time the user answers the save prompt, either way, so
+  // they are never asked twice.
+  neoIdPromptDismissedAt DateTime?
 }
 
 model Interest {

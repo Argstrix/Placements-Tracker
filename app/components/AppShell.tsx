@@ -83,7 +83,7 @@ export default function AppShell({
             <i />
           </span>
           <span>
-            <b>Placement Board</b>
+            <b>Placement Tracker</b>
             <small>vitstudent.ac.in</small>
           </span>
         </Link>
@@ -126,7 +126,7 @@ export default function AppShell({
             <i />
             <i />
           </span>
-          <b>Placement Board</b>
+          <b>Placement Tracker</b>
           <button
             className="menubtn"
             type="button"

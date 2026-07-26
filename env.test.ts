@@ -32,6 +32,7 @@ describe("getEnv", () => {
       BLOB_READ_WRITE_TOKEN: "token",
       CRON_SECRET: "secret",
       NEO_ID_HASH_SECRET: "pepper",
+      NEO_ID_ENC_SECRET: "vault-secret",
     };
     expect(getEnv().INITIAL_ADMIN_EMAIL).toBe("a@b.com");
   });

@@ -60,6 +60,7 @@ export default function AppShell({
     { href: "/admin/retention", label: "Retention" },
   ];
 
+  const isAuthPage = pathname.startsWith("/auth/");
   const isActive = (item: NavItem) => (item.match ? item.match(pathname) : pathname === item.href);
 
   const renderNav = (items: NavItem[]) =>
@@ -69,6 +70,29 @@ export default function AppShell({
         <span>{item.label}</span>
       </Link>
     ));
+
+  if (isAuthPage) {
+    return (
+      <div className="authshell">
+        <div className="authtop">
+          <Link href="/" className="brand">
+            <span className="glyph" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <span>
+              <b>Placement Tracker</b>
+              <small>vitstudent.ac.in</small>
+            </span>
+          </Link>
+          <ThemeToggle />
+        </div>
+        <main className="authmain">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className={`shell${navOpen ? " nav-open" : ""}`}>
@@ -111,7 +135,7 @@ export default function AppShell({
           <a
             className="themebtn"
             style={{ marginLeft: "auto" }}
-            href={isSignedIn ? "/api/auth/signout" : "/api/auth/signin"}
+            href={isSignedIn ? "/auth/signout" : "/auth/signin"}
           >
             {isSignedIn ? "SIGN OUT" : "SIGN IN"}
           </a>

@@ -8,6 +8,10 @@ import { seedInitialAdmin } from "@/admin/seedInitialAdmin";
 export function buildAuthOptions(): NextAuthOptions {
   const env = getEnv();
   return {
+    pages: {
+      signIn: "/auth/signin",
+      signOut: "/auth/signout",
+    },
     providers: [
       GoogleProvider({
         clientId: env.GOOGLE_CLIENT_ID,

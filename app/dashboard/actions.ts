@@ -21,10 +21,11 @@ export async function setInterest(companyId: string, status: string): Promise<vo
 }
 
 /** Self-service data erasure: removes this account and every tracked-interest
- * record. (Neo IDs are never stored, so there's nothing of that kind to erase.)
- * Scoped to the user's own personalization data — reported issues aren't
- * touched, since those are support records the admin may still need to act on,
- * akin to a support ticket. A no-op if the user never tracked any interest. */
+ * record. If the user opted into saving their own Neo ID (auth/neoIdVault.ts),
+ * that goes too — it lives on the same User row. Scoped to the user's own
+ * personalization data — reported issues aren't touched, since those are
+ * support records the admin may still need to act on, akin to a support
+ * ticket. A no-op if the user never tracked any interest or saved a Neo ID. */
 export async function deleteMyData(): Promise<void> {
   const session = await getServerSession(buildAuthOptions());
   if (!session?.user?.email) throw new Error("Not authorized");

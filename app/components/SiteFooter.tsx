@@ -12,9 +12,9 @@ export default function SiteFooter() {
         shared with.
       </p>
       <p>
-        <strong>We do not store Neo IDs.</strong> Shortlist matching uses irreversible one-way fingerprints of the IDs
-        in shortlist mails — no Neo ID is ever kept in the database — and your own Neo ID is used only during your
-        session and is never saved.
+        <strong>Shortlist matching never stores a Neo ID.</strong> It uses irreversible one-way fingerprints of the
+        IDs in shortlist mails. Separately, you can choose to save your own Neo ID to your account, encrypted,
+        purely for autofill convenience — never on by default, and removable any time from your dashboard.
       </p>
     </footer>
   );

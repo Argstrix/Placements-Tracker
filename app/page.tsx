@@ -55,7 +55,8 @@ export default function HomePage() {
           <h3>Check your shortlist</h3>
           <p className="psub" style={{ marginBottom: 0 }}>
             Enter your Neo ID to see who shortlisted you. It&rsquo;s matched against one-way fingerprints and never
-            saved — no Neo ID, yours or anyone&rsquo;s, is ever stored.
+            stored for the check itself — you can optionally save your own Neo ID to your account afterward, only
+            if you choose to.
           </p>
         </div>
         <div className="panel">

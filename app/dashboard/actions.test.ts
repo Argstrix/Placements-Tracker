@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createTestPrismaClient } from "@/db/testClient";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -14,6 +14,14 @@ vi.mock("next-auth", () => ({ getServerSession: (...args: unknown[]) => mockGetS
 vi.mock("@/auth/authOptions", () => ({ buildAuthOptions: vi.fn() }));
 
 describe("deleteMyData", () => {
+  const REAL_SECRET = process.env.NEO_ID_ENC_SECRET;
+  beforeEach(() => {
+    process.env.NEO_ID_ENC_SECRET = "test-vault-secret";
+  });
+  afterEach(() => {
+    process.env.NEO_ID_ENC_SECRET = REAL_SECRET;
+  });
+
   it("rejects when there is no session", async () => {
     mockGetServerSession.mockResolvedValue(null);
     const { deleteMyData } = await import("./actions");
@@ -43,6 +51,20 @@ describe("deleteMyData", () => {
     expect(interests).toHaveLength(0);
     const stillExists = await db.company.findUnique({ where: { id: company.id } });
     expect(stillExists).not.toBeNull();
+  });
+
+  it("also erases a saved Neo ID, since the whole account row is removed", async () => {
+    mockGetServerSession.mockResolvedValue({ user: { email: "vault-erasure@vitstudent.ac.in" } });
+    const { saveNeoId } = await import("@/auth/neoIdVaultActions");
+    const { deleteMyData } = await import("./actions");
+    const { prisma } = await import("@/db/client");
+    const db = prisma as Awaited<ReturnType<typeof createTestPrismaClient>>;
+
+    await saveNeoId("23BCE1234");
+    await deleteMyData();
+
+    const user = await db.user.findUnique({ where: { email: "vault-erasure@vitstudent.ac.in" } });
+    expect(user).toBeNull();
   });
 });
 

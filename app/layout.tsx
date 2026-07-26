@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { getServerSession } from "next-auth";
 import { buildAuthOptions } from "@/auth/authOptions";
 import { isAuthorized } from "@/auth/isAuthorized";
@@ -37,6 +38,7 @@ export default async function RootLayout({
           <main className="content">{children}</main>
           <SiteFooter />
         </AppShell>
+        <SpeedInsights />
       </body>
     </html>
   );

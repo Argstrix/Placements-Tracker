@@ -1,6 +1,7 @@
 import { prisma } from "@/db/client";
 import { getServerSession } from "next-auth";
 import { buildAuthOptions } from "@/auth/authOptions";
+import { forgetNeoId } from "@/auth/neoIdVaultActions";
 import DeleteMyDataButton from "./DeleteMyDataButton";
 import Link from "next/link";
 
@@ -37,9 +38,25 @@ export default async function DashboardPage() {
         <span className="ci">✓</span>
         <div>
           Wondering if you got shortlisted? <Link href="/search" style={{ color: "var(--info)", fontWeight: 600 }}>Check your Neo ID</Link>.
-          It&rsquo;s entered fresh each session and <b>never saved</b> — so it&rsquo;s not shown here, by design.
+          It&rsquo;s never stored for the check itself — only saved here if you opt in on that page.
         </div>
       </div>
+
+      {user?.neoIdEncrypted && (
+        <div className="panel" style={{ marginBottom: 18 }}>
+          <div className="panelhead">
+            <h3>Saved Neo ID</h3>
+          </div>
+          <div className="formrow">
+            <span className="mono">•••••••• saved, encrypted — used to pre-fill Check shortlist</span>
+            <form action={forgetNeoId} style={{ marginLeft: "auto" }}>
+              <button type="submit" className="btn danger">
+                Forget it
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="panel" style={{ marginBottom: 18 }}>
         <div className="panelhead">

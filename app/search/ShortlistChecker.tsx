@@ -2,13 +2,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { checkShortlist, type ShortlistMatch } from "./actions";
+import { saveNeoId, dismissNeoIdPrompt } from "@/auth/neoIdVaultActions";
 
-export default function ShortlistChecker() {
+type SavedState = "none" | "asked" | "saved";
+
+export default function ShortlistChecker({
+  savedState,
+  savedNeoId,
+}: {
+  savedState: SavedState;
+  savedNeoId?: string;
+}) {
   const [consent, setConsent] = useState(false);
-  const [neoId, setNeoId] = useState("");
+  const [neoId, setNeoId] = useState(savedNeoId ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<ShortlistMatch[] | null>(null);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [savePromptDone, setSavePromptDone] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,8 +29,12 @@ export default function ShortlistChecker() {
     setMatches(null);
     try {
       const res = await checkShortlist(neoId);
-      if (res.error) setError(res.error);
-      else setMatches(res.matches ?? []);
+      if (res.error) {
+        setError(res.error);
+      } else {
+        setMatches(res.matches ?? []);
+        if (savedState === "none" && !savePromptDone) setShowSavePrompt(true);
+      }
     } catch {
       setError("Something went wrong. Try again in a moment.");
     } finally {
@@ -26,12 +42,34 @@ export default function ShortlistChecker() {
     }
   }
 
+  async function onSaveNeoId() {
+    setSaving(true);
+    try {
+      await saveNeoId(neoId);
+    } finally {
+      setSaving(false);
+      setSavePromptDone(true);
+      setShowSavePrompt(false);
+    }
+  }
+
+  async function onDismissPrompt() {
+    setSaving(true);
+    try {
+      await dismissNeoIdPrompt();
+    } finally {
+      setSaving(false);
+      setSavePromptDone(true);
+      setShowSavePrompt(false);
+    }
+  }
+
   return (
     <div className="panel">
       <h3>Check your shortlist status</h3>
       <p className="psub">
-        Enter your full Neo ID to see which companies shortlisted you. Your Neo ID is checked against one-way
-        fingerprints and is <strong>never saved</strong> — not to the database, not to any log.
+        Enter your full Neo ID to see which companies shortlisted you. It&rsquo;s checked against one-way
+        fingerprints and <strong>never stored</strong> for the check itself.
       </p>
 
       <label
@@ -44,9 +82,9 @@ export default function ShortlistChecker() {
           style={{ marginTop: 3, flex: "none" }}
         />
         <span>
-          I&rsquo;m a current-batch student authorized to view these shortlists, and I understand my Neo ID is used only
-          for this check and is not stored. Shortlists come from placement-cell mail and may contain errors — I&rsquo;ll
-          confirm anything important against the original mail.
+          I&rsquo;m a current-batch student authorized to view these shortlists, and I understand my Neo ID is used
+          only for this check. Shortlists come from placement-cell mail and may contain errors — I&rsquo;ll confirm
+          anything important against the original mail.
         </span>
       </label>
 
@@ -69,6 +107,24 @@ export default function ShortlistChecker() {
       {error && (
         <div className="results">
           <div className="empty">{error}</div>
+        </div>
+      )}
+
+      {showSavePrompt && (
+        <div className="callout" style={{ marginTop: 14 }}>
+          <span className="ci">?</span>
+          <div>
+            <b>Save this Neo ID to your account for next time?</b> It&rsquo;ll be encrypted and only used to
+            pre-fill this form.
+            <div className="formrow" style={{ marginTop: 8 }}>
+              <button type="button" className="btn pri" disabled={saving} onClick={onSaveNeoId}>
+                Save it
+              </button>
+              <button type="button" className="btn" disabled={saving} onClick={onDismissPrompt}>
+                No, don&rsquo;t ask again
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
